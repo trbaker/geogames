@@ -1,0 +1,2356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The California Trail — The Golden Road, 1849</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display+SC:wght@400;700;900&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --paper:#f0dcac;--pmid:#d8c080;--pdark:#b89448;--pdeep:#9a7830;
+  --ink:#180c04;--inkm:#382010;--inkl:#584030;
+  --gold:#987000;--goldl:#c09020;--goldb:#d8a830;
+  --rust:#7a2008;--rustl:#a03820;
+  --sage:#284020;--sagel:#486838;
+  --sky:#3a6880;--skyl:#6090b0;
+  --bd:#7a5028;
+  --fd:'Playfair Display SC',serif;
+  --fb:'Courier Prime',monospace;
+  --fs:'Libre Baskerville',serif;
+}
+html,body{height:100%;overflow:hidden;}
+body{background:#0c0804;font-family:var(--fb);color:var(--ink);}
+#game{width:100vw;height:100vh;position:relative;overflow:hidden;background:var(--paper);}
+
+/* ── PAPER TEXTURE ── */
+#game::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:998;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  mix-blend-mode:multiply;}
+
+/* ════════════════════════════════════
+   TITLE SCREEN
+════════════════════════════════════ */
+#title-screen{position:absolute;inset:0;z-index:200;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 50% 35%,#2a1408 0%,#0c0804 75%);}
+.title-frame{border:2px solid var(--goldb);padding:40px 60px;text-align:center;position:relative;
+  max-width:680px;box-shadow:0 0 0 6px rgba(216,168,48,0.12),0 0 60px rgba(216,168,48,0.08);}
+.title-frame::before,.title-frame::after{content:'';position:absolute;width:20px;height:20px;border-color:var(--goldb);border-style:solid;}
+.title-frame::before{top:-1px;left:-1px;border-width:2px 0 0 2px;}
+.title-frame::after{bottom:-1px;right:-1px;border-width:0 2px 2px 0;}
+.title-ornament{font-family:var(--fs);font-size:13px;letter-spacing:8px;text-transform:uppercase;
+  color:var(--goldb);margin-bottom:14px;opacity:0.9;}
+.title-big{font-family:var(--fd);font-size:clamp(38px,6vw,68px);line-height:1;color:var(--paper);
+  text-shadow:0 0 40px rgba(216,168,48,0.35);margin-bottom:10px;}
+.title-year{font-family:var(--fb);font-size:28px;color:var(--goldb);letter-spacing:12px;margin-bottom:16px;}
+.title-divider{display:flex;align-items:center;gap:12px;margin:12px 0;opacity:0.6;}
+.title-divider::before,.title-divider::after{content:'';flex:1;height:1px;background:var(--goldb);}
+.title-divider span{color:var(--goldb);font-size:16px;}
+.title-tagline{font-family:var(--fs);font-style:italic;font-size:15px;color:rgba(240,220,172,0.65);
+  line-height:1.8;max-width:460px;margin:12px auto 28px;}
+.btn-gold{background:var(--rust);border:2px solid var(--rustl);color:var(--paper);
+  font-family:var(--fd);font-size:16px;padding:13px 38px;cursor:pointer;letter-spacing:2px;
+  transition:all .2s;position:relative;overflow:hidden;}
+.btn-gold:hover{background:var(--rustl);transform:translateY(-2px);box-shadow:0 8px 24px rgba(122,32,8,0.5);}
+.btn-ghost{background:transparent;border:1px solid var(--goldb);color:var(--goldb);
+  font-family:var(--fb);font-size:12px;padding:9px 24px;cursor:pointer;letter-spacing:3px;
+  text-transform:uppercase;transition:all .2s;margin-top:10px;}
+.btn-ghost:hover{background:rgba(216,168,48,0.1);}
+.nugget-row{display:flex;justify-content:center;gap:8px;margin:18px 0;font-size:22px;}
+.nugget{display:inline-block;animation:sway 3s ease-in-out infinite;}
+.nugget:nth-child(2){animation-delay:.4s;}
+.nugget:nth-child(3){animation-delay:.8s;}
+@keyframes sway{0%,100%{transform:rotate(-8deg);}50%{transform:rotate(8deg);}}
+
+/* ════════════════════════════════════
+   OCCUPATION SCREEN
+════════════════════════════════════ */
+#occ-screen{position:absolute;inset:0;z-index:200;display:none;flex-direction:column;
+  align-items:center;justify-content:flex-start;padding:24px 20px;overflow-y:auto;
+  background:radial-gradient(ellipse at 50% 30%,#2a1408 0%,#0c0804 80%);}
+.screen-heading{font-family:var(--fd);font-size:clamp(22px,3.5vw,36px);color:var(--paper);
+  text-align:center;margin-bottom:6px;}
+.screen-sub{font-family:var(--fs);font-style:italic;font-size:14px;color:rgba(240,220,172,0.55);
+  text-align:center;margin-bottom:18px;}
+.name-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;width:100%;max-width:820px;margin-bottom:18px;}
+.name-col{display:flex;flex-direction:column;gap:5px;}
+.name-col label{font-family:var(--fb);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--goldb);}
+.name-col input{background:rgba(240,220,172,0.08);border:1px solid var(--goldb);color:var(--paper);
+  font-family:var(--fb);padding:7px 9px;font-size:13px;width:100%;}
+.name-col input:focus{outline:none;border-color:var(--rustl);}
+.occ-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;max-width:820px;width:100%;margin-bottom:18px;}
+.occ-card{background:rgba(240,220,172,0.05);border:2px solid var(--goldb);padding:22px 16px;
+  cursor:pointer;transition:all .25s;text-align:center;border-radius:1px;}
+.occ-card:hover{background:rgba(240,220,172,0.1);transform:translateY(-3px);}
+.occ-card.selected{background:rgba(122,32,8,0.3);border-color:var(--rustl);}
+.occ-icon{font-size:36px;margin-bottom:10px;}
+.occ-name{font-family:var(--fd);font-size:16px;color:var(--paper);margin-bottom:6px;}
+.occ-cash{font-family:var(--fb);font-size:11px;color:var(--goldb);letter-spacing:1px;margin-bottom:8px;}
+.occ-special{font-family:var(--fb);font-size:10px;color:var(--goldb);letter-spacing:1px;
+  background:rgba(216,168,48,0.15);border:1px solid rgba(216,168,48,0.3);padding:4px 8px;margin-bottom:8px;}
+.occ-desc{font-family:var(--fs);font-style:italic;font-size:12px;color:rgba(240,220,172,0.65);line-height:1.6;}
+.diff-pill{display:inline-block;padding:2px 10px;font-family:var(--fb);font-size:9px;letter-spacing:2px;
+  text-transform:uppercase;margin-top:6px;}
+.dp-easy{background:#1e4010;color:#80c060;}
+.dp-med{background:#3a3010;color:#c0a040;}
+.dp-hard{background:#3a1008;color:#c06040;}
+.occ-nav{display:flex;gap:12px;}
+
+/* ════════════════════════════════════
+   STORE SCREEN
+════════════════════════════════════ */
+#store-screen{position:absolute;inset:0;z-index:200;display:none;flex-direction:column;background:var(--paper);}
+.store-topbar{background:var(--inkm);color:var(--paper);padding:14px 28px;
+  display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--goldb);}
+.store-topbar-title{font-family:var(--fd);font-size:24px;}
+.store-budget-label{font-family:var(--fb);font-size:10px;letter-spacing:2px;
+  color:rgba(240,220,172,0.5);text-transform:uppercase;margin-bottom:3px;}
+.store-budget-val{font-family:var(--fd);font-size:22px;color:var(--goldb);}
+.store-body{display:grid;grid-template-columns:1fr 300px;flex:1;overflow:hidden;}
+.store-items-wrap{padding:20px 24px;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;
+  gap:12px;align-content:start;}
+.store-item{background:var(--pmid);border:2px solid var(--bd);padding:14px;display:flex;
+  flex-direction:column;gap:6px;}
+.si-name{font-family:var(--fd);font-size:14px;color:var(--inkm);}
+.si-price{font-family:var(--fb);font-size:11px;color:var(--gold);letter-spacing:1px;}
+.si-desc{font-family:var(--fs);font-style:italic;font-size:11px;color:var(--inkl);line-height:1.5;}
+.si-controls{display:flex;align-items:center;gap:8px;margin-top:4px;}
+.sq-btn{width:26px;height:26px;background:var(--rust);border:none;color:var(--paper);
+  font-size:14px;cursor:pointer;transition:background .15s;}
+.sq-btn:hover{background:var(--rustl);}
+.sq-disp{font-family:var(--fd);font-size:16px;min-width:38px;text-align:center;color:var(--inkm);}
+.si-total{font-family:var(--fb);font-size:10px;color:var(--gold);margin-left:auto;}
+.store-sidebar{background:var(--pdark);border-left:3px solid var(--bd);padding:20px;
+  display:flex;flex-direction:column;gap:14px;overflow-y:auto;}
+.store-sidebar-title{font-family:var(--fd);font-size:16px;color:var(--inkm);
+  border-bottom:2px solid var(--bd);padding-bottom:8px;}
+.sum-row{display:flex;justify-content:space-between;font-family:var(--fb);font-size:12px;color:var(--inkl);}
+.sum-total{font-size:14px;color:var(--rust);border-top:1px solid var(--bd);padding-top:6px;margin-top:4px;}
+.store-tip{background:rgba(24,12,4,0.08);border-left:3px solid var(--rust);padding:10px 12px;
+  font-family:var(--fs);font-style:italic;font-size:12px;color:var(--inkm);line-height:1.6;}
+.store-footer{padding:14px 28px;background:var(--pmid);border-top:2px solid var(--bd);
+  display:flex;align-items:center;justify-content:space-between;}
+
+/* ════════════════════════════════════
+   TRAVEL SCREEN
+════════════════════════════════════ */
+#travel-screen{position:absolute;inset:0;z-index:10;display:none;flex-direction:column;}
+.travel-topbar{background:var(--inkm);color:var(--paper);padding:8px 18px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:3px solid var(--goldb);flex-shrink:0;}
+.tb-title{font-family:var(--fd);font-size:18px;letter-spacing:1px;}
+.tb-stats{display:flex;gap:20px;font-family:var(--fb);font-size:12px;}
+.tb-stat{display:flex;flex-direction:column;align-items:center;}
+.tb-stat .lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(240,220,172,0.45);}
+.tb-stat .val{color:var(--goldb);font-size:14px;}
+.travel-body{display:flex;flex:1;overflow:hidden;}
+
+/* Sidebar */
+.sidebar{width:280px;background:var(--paper);border-right:3px solid var(--bd);
+  display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;}
+.sb-section{padding:12px 14px;border-bottom:2px solid var(--pmid);}
+.sb-section:last-child{border-bottom:none;}
+.sb-title{font-family:var(--fd);font-size:11px;color:var(--rust);letter-spacing:2px;
+  text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.sb-title::after{content:'';flex:1;height:1px;background:var(--rust);opacity:0.25;}
+.party-row{display:flex;align-items:center;gap:7px;margin-bottom:6px;}
+.pr-name{font-family:var(--fb);font-size:12px;color:var(--inkm);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pr-name.dead{text-decoration:line-through;color:#999;font-style:italic;}
+.hbar-wrap{width:60px;background:var(--pmid);height:7px;border-radius:1px;overflow:hidden;}
+.hbar{height:100%;transition:width .5s;border-radius:1px;}
+.hb-good{background:#4a7a3a;}.hb-fair{background:#8a7a2a;}
+.hb-poor{background:#8a4a2a;}.hb-crit{background:#8a1a1a;}.hb-dead{background:#555;}
+.pr-cond{font-family:var(--fb);font-size:9px;width:52px;text-align:right;color:var(--inkl);}
+.sup-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;
+  font-family:var(--fb);font-size:12px;}
+.sup-icon{font-size:14px;width:20px;}
+.sup-name{color:var(--inkl);flex:1;}
+.sup-val{color:var(--inkm);font-weight:bold;}
+.sup-warn{color:var(--rust);}
+.sup-crit{color:#cc2020;animation:blink 1s ease infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.ctrl-label{font-family:var(--fb);font-size:10px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--gold);margin-bottom:5px;}
+.ctrl-row{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;}
+.ctrl-btn{flex:1;padding:5px 6px;border:2px solid var(--bd);background:var(--pmid);
+  font-family:var(--fb);font-size:10px;cursor:pointer;color:var(--inkm);text-align:center;
+  transition:all .15s;min-width:52px;}
+.ctrl-btn:hover{border-color:var(--rust);color:var(--rust);}
+.ctrl-btn.active{background:var(--inkm);border-color:var(--inkm);color:var(--paper);}
+.action-list{display:flex;flex-direction:column;gap:6px;padding:12px 14px;}
+.act-btn{padding:9px 12px;border:none;font-family:var(--fd);font-size:12px;cursor:pointer;
+  letter-spacing:1px;transition:all .2s;display:flex;align-items:center;gap:7px;}
+.act-continue{background:var(--sage);color:var(--paper);}
+.act-continue:hover{background:var(--sagel);}
+.act-hunt{background:var(--rust);color:var(--paper);}
+.act-hunt:hover{background:var(--rustl);}
+.act-rest{background:var(--inkl);color:var(--paper);}
+.act-rest:hover{background:var(--inkm);}
+.act-status{background:var(--gold);color:var(--paper);}
+.act-status:hover{background:var(--goldl);}
+.act-prospect{background:#5a7820;color:var(--paper);}
+.act-prospect:hover{background:#709030;}
+
+/* Right panel */
+.right-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+#map{flex:1;min-height:200px;}
+.log-panel{height:190px;background:var(--ink);color:var(--paper);overflow-y:auto;
+  padding:10px 14px;flex-shrink:0;border-top:3px solid var(--goldb);}
+.log-entry{font-family:var(--fb);font-size:12px;line-height:1.7;padding:1px 0;
+  border-bottom:1px solid rgba(240,220,172,0.07);}
+.log-date{color:var(--goldb);font-weight:bold;}
+.log-critical{color:#e05040;}
+.log-good{color:#70a850;}
+.log-landmark{color:var(--goldb);}
+.log-warn{color:#c09040;}
+.log-gold{color:#e8bc30;}
+.progress-wrap{height:7px;background:var(--pmid);border:1px solid var(--bd);margin-top:4px;}
+.progress-fill{height:100%;background:var(--sage);transition:width .6s;}
+
+/* ════════════════════════════════════
+   MODALS — EVENT
+════════════════════════════════════ */
+#event-modal{position:absolute;inset:0;z-index:500;display:none;align-items:center;
+  justify-content:center;background:rgba(12,8,4,0.78);}
+.event-box{background:var(--paper);border:4px solid var(--bd);max-width:520px;width:92%;
+  box-shadow:0 24px 60px rgba(0,0,0,0.7);}
+.ev-header{background:var(--inkm);color:var(--paper);padding:14px 20px;
+  font-family:var(--fd);font-size:18px;border-bottom:2px solid var(--goldb);}
+.ev-icon{font-size:42px;text-align:center;padding:18px 0 8px;}
+.ev-body{padding:14px 22px;font-family:var(--fs);font-style:italic;font-size:14px;
+  color:var(--inkm);line-height:1.85;white-space:pre-line;}
+.ev-choices{padding:14px 22px 18px;display:flex;flex-direction:column;gap:7px;}
+.choice-btn{padding:11px 14px;border:2px solid var(--bd);background:var(--pmid);
+  font-family:var(--fb);font-size:12px;cursor:pointer;color:var(--inkm);
+  text-align:left;transition:all .2s;}
+.choice-btn:hover{background:var(--inkm);color:var(--paper);border-color:var(--inkm);}
+.ev-result{padding:14px 22px 18px;background:rgba(24,12,4,0.07);border:1px solid var(--bd);
+  margin:0 18px 18px;font-family:var(--fb);font-size:13px;color:var(--inkm);line-height:1.8;}
+
+/* ════════════════════════════════════
+   HUNTING SCREEN
+════════════════════════════════════ */
+#hunt-screen{position:absolute;inset:0;z-index:400;display:none;flex-direction:column;background:var(--paper);}
+.hunt-topbar{background:var(--inkm);color:var(--paper);padding:10px 22px;
+  display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--rust);}
+.hunt-title{font-family:var(--fd);font-size:20px;}
+.hunt-stats{display:flex;gap:28px;}
+.hunt-stat{font-family:var(--fb);font-size:13px;display:flex;flex-direction:column;align-items:center;}
+.hunt-stat span:first-child{font-size:9px;letter-spacing:2px;color:rgba(240,220,172,0.5);}
+.hunt-stat span:last-child{color:var(--goldb);font-size:16px;}
+.hunt-timer-bar{height:5px;background:var(--rust);transition:width .5s linear;}
+.hunt-canvas-wrap{flex:1;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,#8ab5d8 0%,#a8c8e0 60%,#9ab888 90%);position:relative;}
+#hunt-canvas{display:block;cursor:crosshair;}
+.hunt-hint{position:absolute;top:10px;left:50%;transform:translateX(-50%);
+  font-family:var(--fb);font-size:12px;color:rgba(255,255,255,0.85);
+  background:rgba(0,0,0,0.28);padding:3px 12px;}
+.hunt-footer{background:var(--pmid);border-top:2px solid var(--bd);padding:14px 22px;
+  font-family:var(--fs);font-style:italic;font-size:13px;color:var(--inkl);text-align:center;}
+
+/* ════════════════════════════════════
+   PROSPECTING MINI-GAME
+════════════════════════════════════ */
+#prospect-screen{position:absolute;inset:0;z-index:400;display:none;align-items:center;
+  justify-content:center;background:rgba(12,8,4,0.82);}
+.prospect-box{background:var(--paper);border:4px solid var(--goldb);max-width:520px;width:92%;
+  box-shadow:0 24px 60px rgba(0,0,0,0.7);}
+.prospect-header{background:var(--ink);color:var(--paper);padding:14px 22px;
+  display:flex;justify-content:space-between;border-bottom:2px solid var(--goldb);}
+.prospect-header h2{font-family:var(--fd);font-size:22px;}
+.prospect-stats{display:flex;gap:24px;font-family:var(--fb);font-size:13px;}
+.prospect-stat{display:flex;flex-direction:column;align-items:center;}
+.prospect-stat span:first-child{font-size:9px;letter-spacing:2px;color:rgba(240,220,172,0.5);}
+.prospect-stat span:last-child{color:var(--goldb);font-size:16px;}
+.prospect-timer-bar{height:5px;background:var(--goldb);transition:width .5s linear;}
+.prospect-canvas-wrap{display:flex;align-items:center;justify-content:center;padding:10px;
+  background:#3a2810;}
+#prospect-canvas{display:block;cursor:pointer;}
+.prospect-footer{padding:14px 22px;font-family:var(--fs);font-style:italic;font-size:13px;
+  color:var(--inkm);text-align:center;background:var(--pmid);border-top:2px solid var(--bd);}
+
+/* ════════════════════════════════════
+   RIVER CROSSING
+════════════════════════════════════ */
+#river-screen{position:absolute;inset:0;z-index:400;display:none;align-items:center;
+  justify-content:center;background:rgba(12,8,4,0.82);}
+.river-box{background:var(--paper);border:4px solid #3a6880;max-width:560px;width:92%;
+  box-shadow:0 24px 60px rgba(0,0,0,0.7);}
+.river-header{background:#1a3848;color:var(--paper);padding:14px 22px;
+  font-family:var(--fd);font-size:20px;border-bottom:3px solid #5a90b8;}
+.river-vis{height:72px;background:linear-gradient(180deg,#4a8ab0 0%,#2a6090 50%,#1a4068 100%);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;}
+.river-vis::after{content:'~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~';position:absolute;
+  font-size:22px;color:rgba(255,255,255,0.22);letter-spacing:7px;
+  animation:rflow 3s linear infinite;}
+@keyframes rflow{from{transform:translateX(-50px);}to{transform:translateX(50px);}}
+.river-meta{padding:14px 22px;display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.rm-stat{font-family:var(--fb);font-size:12px;color:var(--inkl);}
+.rm-stat strong{color:var(--inkm);}
+.river-desc{padding:0 22px 14px;font-family:var(--fs);font-style:italic;font-size:13px;
+  color:var(--inkm);line-height:1.7;}
+.river-choices{padding:0 22px 22px;display:flex;flex-direction:column;gap:7px;}
+.rc-btn{padding:12px 16px;border:2px solid var(--bd);background:var(--pmid);cursor:pointer;
+  font-family:var(--fb);font-size:12px;color:var(--inkm);transition:all .2s;
+  display:flex;justify-content:space-between;align-items:center;}
+.rc-btn:hover{background:var(--inkm);color:var(--paper);}
+.rc-risk{font-size:10px;opacity:0.7;}
+.river-result{padding:14px 22px 18px;background:rgba(24,12,4,0.06);border:1px solid var(--bd);
+  margin:0 18px 18px;font-family:var(--fb);font-size:13px;color:var(--inkm);line-height:1.7;}
+
+/* ════════════════════════════════════
+   40-MILE DESERT
+════════════════════════════════════ */
+#desert-screen{position:absolute;inset:0;z-index:500;display:none;align-items:center;
+  justify-content:center;background:rgba(40,16,0,0.92);}
+.desert-box{background:var(--paper);border:4px solid var(--rust);max-width:580px;width:92%;
+  box-shadow:0 24px 60px rgba(0,0,0,0.8);}
+.desert-header{background:#4a2800;color:var(--paper);padding:16px 22px;
+  border-bottom:3px solid var(--rust);}
+.desert-header h2{font-family:var(--fd);font-size:22px;color:var(--paper);}
+.desert-header .dh-sub{font-family:var(--fb);font-size:11px;color:var(--goldb);letter-spacing:2px;margin-top:4px;}
+.desert-vis{height:80px;background:linear-gradient(180deg,#e8b840 0%,#c89020 40%,#8a6010 100%);
+  display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+.desert-vis::before{content:'☀';position:absolute;top:-8px;right:20px;font-size:48px;
+  color:rgba(255,220,0,0.4);animation:sunpulse 2s ease-in-out infinite;}
+@keyframes sunpulse{0%,100%{opacity:0.4;}50%{opacity:0.7;}}
+.desert-warning{padding:16px 22px;background:rgba(122,32,8,0.1);border:1px solid var(--rust);
+  margin:0 20px 14px;font-family:var(--fs);font-style:italic;font-size:13px;
+  color:var(--inkm);line-height:1.8;}
+.desert-water-status{padding:0 22px 14px;font-family:var(--fb);font-size:13px;color:var(--inkm);}
+.dwstatus-bar{height:10px;background:var(--pmid);border:1px solid var(--bd);margin-top:6px;}
+.dwstatus-fill{height:100%;background:var(--sky);transition:width .4s;}
+.desert-choices{padding:0 22px 22px;display:flex;flex-direction:column;gap:8px;}
+.dc-btn{padding:13px 16px;border:2px solid var(--bd);background:var(--pmid);cursor:pointer;
+  font-family:var(--fb);font-size:12px;color:var(--inkm);transition:all .2s;text-align:left;}
+.dc-btn:hover{background:var(--inkm);color:var(--paper);}
+.desert-result{padding:14px 22px 18px;background:rgba(24,12,4,0.08);border:1px solid var(--bd);
+  margin:0 18px 18px;font-family:var(--fb);font-size:13px;color:var(--inkm);line-height:1.8;}
+
+/* ════════════════════════════════════
+   SIERRA NEVADA CROSSING
+════════════════════════════════════ */
+#sierra-screen{position:absolute;inset:0;z-index:500;display:none;align-items:center;
+  justify-content:center;background:rgba(4,8,20,0.9);}
+.sierra-box{background:var(--paper);border:4px solid #7898b8;max-width:580px;width:92%;
+  box-shadow:0 24px 60px rgba(0,0,0,0.8);}
+.sierra-header{background:#1a2838;color:var(--paper);padding:16px 22px;
+  border-bottom:3px solid #5a80a8;}
+.sierra-header h2{font-family:var(--fd);font-size:22px;}
+.sierra-header .sh-sub{font-family:var(--fb);font-size:11px;color:#a8c8e8;letter-spacing:2px;margin-top:4px;}
+.sierra-vis{height:80px;background:linear-gradient(180deg,#b8d0e8 0%,#9ab8d0 40%,#6888a0 100%);
+  display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+.sierra-snow{position:absolute;top:0;left:0;right:0;bottom:0;
+  background-image:radial-gradient(circle,white 1px,transparent 1px);
+  background-size:20px 20px;opacity:0.3;animation:snowdrift 4s linear infinite;}
+@keyframes snowdrift{from{background-position:0 0;}to{background-position:20px 20px;}}
+.sierra-season-warn{padding:14px 22px;font-family:var(--fd);font-size:15px;text-align:center;}
+.sierra-desc{padding:0 22px 14px;font-family:var(--fs);font-style:italic;font-size:13px;
+  color:var(--inkm);line-height:1.7;}
+.sierra-choices{padding:0 22px 22px;display:flex;flex-direction:column;gap:8px;}
+.sc-btn{padding:13px 16px;border:2px solid var(--bd);background:var(--pmid);cursor:pointer;
+  font-family:var(--fb);font-size:12px;color:var(--inkm);transition:all .2s;text-align:left;}
+.sc-btn:hover{background:var(--inkm);color:var(--paper);}
+.sierra-result{padding:14px 22px 18px;background:rgba(24,12,4,0.08);border:1px solid var(--bd);
+  margin:0 18px 18px;font-family:var(--fb);font-size:13px;color:var(--inkm);line-height:1.8;}
+
+/* ════════════════════════════════════
+   FORT / LANDMARK MODAL
+════════════════════════════════════ */
+#fort-screen{position:absolute;inset:0;z-index:400;display:none;align-items:center;
+  justify-content:center;background:rgba(12,8,4,0.82);}
+.fort-box{background:var(--paper);border:4px solid var(--bd);max-width:620px;width:92%;
+  box-shadow:0 24px 60px rgba(0,0,0,0.7);}
+.fort-header{background:var(--ink);color:var(--paper);padding:14px 22px;
+  border-bottom:3px solid var(--goldb);}
+.fort-title{font-family:var(--fd);font-size:22px;margin-bottom:4px;}
+.fort-dist{font-family:var(--fb);font-size:10px;color:var(--goldb);letter-spacing:2px;}
+.fort-body{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+.fort-desc-panel{padding:18px 22px;border-right:2px solid var(--bd);}
+.fort-desc{font-family:var(--fs);font-style:italic;font-size:13px;color:var(--inkm);
+  line-height:1.8;margin-bottom:12px;}
+.fort-bonus{background:rgba(72,104,56,0.12);border:1px solid var(--sage);
+  padding:8px;font-family:var(--fb);font-size:11px;color:var(--sage);}
+.fort-actions-panel{padding:18px 22px;}
+.fort-action{padding:10px 14px;border:2px solid var(--bd);background:var(--pmid);cursor:pointer;
+  font-family:var(--fd);font-size:13px;color:var(--inkm);transition:all .2s;
+  display:block;width:100%;text-align:left;margin-bottom:7px;}
+.fort-action:hover{background:var(--inkm);color:var(--paper);}
+.trade-panel{padding:0 22px 20px;border-top:2px solid var(--bd);}
+.trade-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px;}
+.trade-row{background:var(--pmid);border:1px solid var(--bd);padding:8px 10px;
+  display:flex;justify-content:space-between;align-items:center;}
+.tr-name{font-family:var(--fb);font-size:12px;color:var(--inkm);}
+.tr-price{font-family:var(--fd);font-size:11px;color:var(--gold);}
+.tr-controls{display:flex;align-items:center;gap:5px;}
+.tr-btn{width:22px;height:22px;background:var(--rust);border:none;color:var(--paper);
+  cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;}
+.tr-val{font-family:var(--fd);font-size:13px;min-width:22px;text-align:center;}
+
+/* ════════════════════════════════════
+   GAME OVER
+════════════════════════════════════ */
+#gameover-screen{position:absolute;inset:0;z-index:300;display:none;flex-direction:column;
+  align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 50% 35%,#1a0c04 0%,#0c0804 80%);}
+.go-border{border:3px solid;padding:44px 56px;text-align:center;max-width:580px;}
+.go-win .go-border{border-color:var(--goldb);box-shadow:0 0 50px rgba(216,168,48,0.15);}
+.go-lose .go-border{border-color:#8a2a20;box-shadow:0 0 50px rgba(138,42,32,0.15);}
+.go-icon{font-size:60px;margin-bottom:18px;}
+.go-title{font-family:var(--fd);font-size:clamp(26px,4vw,42px);color:var(--paper);margin-bottom:12px;}
+.go-msg{font-family:var(--fs);font-style:italic;font-size:15px;color:rgba(240,220,172,0.65);
+  line-height:1.8;margin-bottom:22px;white-space:pre-line;}
+.go-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:26px;}
+.go-stat{background:rgba(240,220,172,0.06);padding:10px;border:1px solid rgba(216,168,48,0.18);}
+.go-stat-label{font-family:var(--fb);font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  color:rgba(240,220,172,0.45);margin-bottom:3px;}
+.go-stat-val{font-family:var(--fd);font-size:18px;color:var(--goldb);}
+
+/* ════════════════════════════════════
+   LEAFLET OVERRIDES
+════════════════════════════════════ */
+.leaflet-container{font-family:var(--fb);}
+.leaflet-control-layers{background:var(--paper)!important;border:2px solid var(--bd)!important;
+  border-radius:0!important;box-shadow:2px 2px 10px rgba(0,0,0,0.4)!important;}
+.leaflet-control-layers-expanded{padding:8px 12px!important;}
+.leaflet-control-layers label{font-family:var(--fb);font-size:12px;color:var(--inkm)!important;
+  display:flex!important;align-items:center;gap:6px;margin:4px 0;}
+.leaflet-control-layers-separator{border-top:1px solid var(--bd)!important;margin:6px 0!important;}
+.leaflet-control-layers-toggle{background-color:var(--inkm)!important;border-radius:0!important;}
+.leaflet-popup-content-wrapper{background:var(--paper);border:2px solid var(--bd);
+  border-radius:0;font-family:var(--fb);font-size:12px;color:var(--inkm);box-shadow:none;}
+.leaflet-popup-tip{background:var(--bd);}
+
+/* ════════════════════════════════════
+   SCROLLBAR
+════════════════════════════════════ */
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:var(--pmid);}
+::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px;}
+::-webkit-scrollbar-thumb:hover{background:var(--rust);}
+
+/* ════════════════════════════════════
+   ANIMATIONS
+════════════════════════════════════ */
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-7px);}75%{transform:translateX(7px);}}
+.anim-in{animation:fadeUp .4s ease forwards;}
+
+/* ════════════════════════════════════
+   RESPONSIVE
+════════════════════════════════════ */
+@media(max-width:760px){
+  .occ-grid{grid-template-columns:1fr 1fr;}
+  .name-grid{grid-template-columns:1fr 1fr;}
+  .sidebar{width:230px;}
+  .fort-body{grid-template-columns:1fr;}
+  .fort-desc-panel{border-right:none;border-bottom:2px solid var(--bd);}
+  .go-stats{grid-template-columns:1fr;}
+  .tb-stats{gap:12px;}
+  .tb-stat .val{font-size:12px;}
+}
+@media(max-width:560px){
+  .occ-grid{grid-template-columns:1fr;}
+  .sidebar{display:none;}
+}
+</style>
+</head>
+<body>
+<div id="game">
+
+  <!-- ══════════════ TITLE SCREEN ══════════════ -->
+  <div id="title-screen">
+    <div class="title-frame anim-in">
+      <div class="title-ornament">Overland Route · 1849</div>
+      <div class="title-big">The California Trail</div>
+      <div class="title-year">MDCCCXLIX</div>
+      <div class="title-divider"><span>✦</span></div>
+      <div class="nugget-row"><span class="nugget">⛏️</span><span class="nugget">🏔️</span><span class="nugget">💰</span></div>
+      <div class="title-tagline">
+        "Gold has been discovered in great abundance. Men have gone wild. The word California is on every lip."<br>— New York Herald, 1849
+      </div>
+      <button class="btn-gold" onclick="showOccupation()">Seek Your Fortune →</button><br>
+      <button class="btn-ghost" onclick="showInstructions()">How to Play</button>
+    </div>
+  </div>
+
+  <!-- ══════════════ OCCUPATION SCREEN ══════════════ -->
+  <div id="occ-screen">
+    <div class="screen-heading anim-in" style="color:var(--paper);margin-top:10px;">Who Are You, Traveler?</div>
+    <div class="screen-sub">Your occupation determines your wealth, skills, and abilities on the trail</div>
+    <div class="name-grid" id="name-grid">
+      <div class="name-col"><label>Your Name</label><input id="n0" type="text" value="James" maxlength="12"/></div>
+      <div class="name-col"><label>Member 2</label><input id="n1" type="text" value="Martha" maxlength="12"/></div>
+      <div class="name-col"><label>Member 3</label><input id="n2" type="text" value="Samuel" maxlength="12"/></div>
+      <div class="name-col"><label>Member 4</label><input id="n3" type="text" value="Clara" maxlength="12"/></div>
+      <div class="name-col"><label>Member 5</label><input id="n4" type="text" value="Ezra" maxlength="12"/></div>
+    </div>
+    <div class="occ-grid">
+      <div class="occ-card" onclick="selectOcc('fortyniner',this)">
+        <div class="occ-icon">⛏️</div>
+        <div class="occ-name">Forty-Niner</div>
+        <div class="occ-cash">Starting: $700</div>
+        <div class="occ-special">⭐ Pan for gold at rivers</div>
+        <div class="diff-pill dp-med">MEDIUM</div>
+        <div class="occ-desc" style="margin-top:8px">A gold seeker lured by tales of riches. You can prospect at rivers for extra cash, but gold fever makes your party harder to manage.</div>
+      </div>
+      <div class="occ-card" onclick="selectOcc('merchant',this)">
+        <div class="occ-icon">🛒</div>
+        <div class="occ-name">Merchant</div>
+        <div class="occ-cash">Starting: $1,400</div>
+        <div class="occ-special">⭐ 15% cheaper at all forts</div>
+        <div class="diff-pill dp-easy">EASY</div>
+        <div class="occ-desc" style="margin-top:8px">A trader hauling goods west. Well-funded and experienced in commerce. You negotiate favorable prices, but your loaded wagon is slower.</div>
+      </div>
+      <div class="occ-card" onclick="selectOcc('farmer',this)">
+        <div class="occ-icon">🌾</div>
+        <div class="occ-name">Farming Family</div>
+        <div class="occ-cash">Starting: $400</div>
+        <div class="occ-special">⭐ −20% food use + 120 lbs free</div>
+        <div class="diff-pill dp-hard">HARD</div>
+        <div class="occ-desc" style="margin-top:8px">Seeking fertile California valley land. Tight on funds but expert foragers who stretch rations further than most.</div>
+      </div>
+      <div class="occ-card" onclick="selectOcc('rancher',this)">
+        <div class="occ-icon">🐄</div>
+        <div class="occ-name">Cattle Rancher</div>
+        <div class="occ-cash">Starting: $900</div>
+        <div class="occ-special">⭐ Oxen hardier, +1 free ox</div>
+        <div class="diff-pill dp-med">MEDIUM</div>
+        <div class="occ-desc" style="margin-top:8px">Driving livestock west to the great California ranches. Your animals are well-conditioned and far less likely to perish on the trail.</div>
+      </div>
+    </div>
+    <div class="occ-nav">
+      <button class="btn-ghost" onclick="showTitle()">← Back</button>
+      <button class="btn-gold" id="occ-next" onclick="showStore()" disabled style="opacity:0.5;cursor:not-allowed;">
+        Outfit at the Supply Store →
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════ STORE SCREEN ══════════════ -->
+  <div id="store-screen">
+    <div class="store-topbar">
+      <div>
+        <div style="font-family:var(--fb);font-size:10px;letter-spacing:2px;color:rgba(240,220,172,0.5);margin-bottom:4px;">PIKE'S GENERAL OUTFITTERS · INDEPENDENCE, MISSOURI</div>
+        <div class="store-topbar-title">Outfit Your Wagon</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="store-budget-label">Available Funds</div>
+        <div class="store-budget-val" id="store-budget">$0</div>
+      </div>
+    </div>
+    <div class="store-body">
+      <div class="store-items-wrap" id="store-items-wrap"></div>
+      <div class="store-sidebar">
+        <div class="store-sidebar-title">Purchase Summary</div>
+        <div id="store-summary-rows"></div>
+        <div class="store-tip" id="store-tip">Recommendation: Food, water, and oxen first. The Nevada desert will demand both water barrels and sturdy animals.</div>
+      </div>
+    </div>
+    <div class="store-footer">
+      <button class="btn-ghost" onclick="showOccupation()">← Back</button>
+      <span style="font-family:var(--fb);font-size:12px;color:var(--inkl)">Remaining: <strong id="store-remaining">$0</strong></span>
+      <button class="btn-gold" id="store-depart" onclick="startJourney()">Depart for California! →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════ TRAVEL SCREEN ══════════════ -->
+  <div id="travel-screen">
+    <div class="travel-topbar">
+      <div class="tb-title">⛟ The Golden Road — California Trail</div>
+      <div class="tb-stats">
+        <div class="tb-stat"><span class="lbl">Date</span><span class="val" id="tb-date">Apr 1, 1849</span></div>
+        <div class="tb-stat"><span class="lbl">Traveled</span><span class="val" id="tb-dist">0 mi</span></div>
+        <div class="tb-stat"><span class="lbl">To Go</span><span class="val" id="tb-remain">2,100 mi</span></div>
+        <div class="tb-stat"><span class="lbl">Weather</span><span class="val" id="tb-weather">Clear ☀️</span></div>
+        <div class="tb-stat"><span class="lbl">Morale</span><span class="val" id="tb-morale">High</span></div>
+      </div>
+    </div>
+    <div class="travel-body">
+      <div class="sidebar">
+        <div class="sb-section">
+          <div class="sb-title">Party</div>
+          <div id="party-list"></div>
+        </div>
+        <div class="sb-section">
+          <div class="sb-title">Supplies</div>
+          <div id="supply-list"></div>
+          <div style="margin-top:5px;font-family:var(--fb);font-size:10px;color:var(--inkl)">Trail Progress</div>
+          <div class="progress-wrap"><div class="progress-fill" id="trail-prog" style="width:0%"></div></div>
+        </div>
+        <div class="sb-section">
+          <div class="ctrl-label">Travel Pace</div>
+          <div class="ctrl-row" id="pace-ctrl">
+            <button class="ctrl-btn active" onclick="setPace('steady',this)">Steady</button>
+            <button class="ctrl-btn" onclick="setPace('strenuous',this)">Hard</button>
+            <button class="ctrl-btn" onclick="setPace('grueling',this)">Grueling</button>
+          </div>
+          <div class="ctrl-label">Daily Rations</div>
+          <div class="ctrl-row" id="ration-ctrl">
+            <button class="ctrl-btn active" onclick="setRations('filling',this)">Filling</button>
+            <button class="ctrl-btn" onclick="setRations('meager',this)">Meager</button>
+            <button class="ctrl-btn" onclick="setRations('bare',this)">Bare</button>
+          </div>
+        </div>
+        <div class="action-list">
+          <button class="act-btn act-continue" onclick="advanceDay()">▶ Continue on Trail</button>
+          <button class="act-btn act-hunt" onclick="goHunting()">🦌 Go Hunting</button>
+          <button class="act-btn act-rest" onclick="restDay()">💤 Rest at Camp</button>
+          <button class="act-btn act-status" onclick="checkStatus()">📋 Check Status</button>
+          <button class="act-btn act-prospect" id="btn-prospect" onclick="goProspecting()" style="display:none;">🥣 Pan for Gold</button>
+        </div>
+      </div>
+      <div class="right-panel">
+        <div id="map"></div>
+        <div class="log-panel" id="log-panel"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ EVENT MODAL ══════════════ -->
+  <div id="event-modal">
+    <div class="event-box anim-in">
+      <div class="ev-header" id="ev-title">Event</div>
+      <div class="ev-icon" id="ev-icon">⚠️</div>
+      <div class="ev-body" id="ev-body"></div>
+      <div class="ev-choices" id="ev-choices"></div>
+      <div class="ev-result" id="ev-result" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════ HUNT SCREEN ══════════════ -->
+  <div id="hunt-screen">
+    <div class="hunt-topbar">
+      <div class="hunt-title">🦌 Hunting Grounds</div>
+      <div class="hunt-stats">
+        <div class="hunt-stat"><span>AMMO</span><span id="h-ammo">--</span></div>
+        <div class="hunt-stat"><span>MEAT</span><span id="h-food">0 lbs</span></div>
+        <div class="hunt-stat"><span>TIME</span><span id="h-time">40s</span></div>
+      </div>
+    </div>
+    <div class="hunt-timer-bar" id="h-tbar" style="width:100%;"></div>
+    <div class="hunt-canvas-wrap">
+      <canvas id="hunt-canvas" width="900" height="350"></canvas>
+      <div class="hunt-hint">Click animals to shoot. Manage your ammunition wisely.</div>
+    </div>
+    <div class="hunt-footer" id="h-footer">Buffalo yield 400 lbs — but your wagon can only carry 200 lbs of meat.</div>
+  </div>
+
+  <!-- ══════════════ PROSPECT SCREEN ══════════════ -->
+  <div id="prospect-screen">
+    <div class="prospect-box anim-in">
+      <div class="prospect-header">
+        <h2>🥣 Gold Panning</h2>
+        <div class="prospect-stats">
+          <div class="prospect-stat"><span>FOUND</span><span id="p-gold">$0</span></div>
+          <div class="prospect-stat"><span>TIME</span><span id="p-time">25s</span></div>
+        </div>
+      </div>
+      <div class="prospect-timer-bar" id="p-tbar" style="width:100%;"></div>
+      <div class="prospect-canvas-wrap">
+        <canvas id="prospect-canvas" width="480" height="220"></canvas>
+      </div>
+      <div class="prospect-footer" id="p-footer">Click the gold nuggets as they appear in the pan! Quick — they drift away.</div>
+    </div>
+  </div>
+
+  <!-- ══════════════ RIVER SCREEN ══════════════ -->
+  <div id="river-screen">
+    <div class="river-box anim-in">
+      <div class="river-header" id="river-title">River Crossing</div>
+      <div class="river-vis"></div>
+      <div class="river-meta" id="river-meta"></div>
+      <div class="river-desc" id="river-desc"></div>
+      <div class="river-choices" id="river-choices"></div>
+      <div class="river-result" id="river-result" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════ DESERT SCREEN ══════════════ -->
+  <div id="desert-screen">
+    <div class="desert-box anim-in">
+      <div class="desert-header">
+        <h2>☀️ The Forty-Mile Desert</h2>
+        <div class="dh-sub">Humboldt Sink, Nevada Territory · No water. No grass. No mercy.</div>
+      </div>
+      <div class="desert-vis">
+        <span style="font-size:18px;color:rgba(255,255,255,0.7);letter-spacing:4px;font-family:var(--fb);">~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~</span>
+      </div>
+      <div class="desert-warning" id="desert-warning"></div>
+      <div class="desert-water-status" id="desert-water-status"></div>
+      <div class="desert-choices" id="desert-choices"></div>
+      <div class="desert-result" id="desert-result" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SIERRA SCREEN ══════════════ -->
+  <div id="sierra-screen">
+    <div class="sierra-box anim-in">
+      <div class="sierra-header">
+        <h2>❄️ Sierra Nevada Mountains</h2>
+        <div class="sh-sub" id="sierra-season-label">Crossing the Final Barrier</div>
+      </div>
+      <div class="sierra-vis"><div class="sierra-snow"></div></div>
+      <div class="sierra-season-warn" id="sierra-warn"></div>
+      <div class="sierra-desc" id="sierra-desc"></div>
+      <div class="sierra-choices" id="sierra-choices"></div>
+      <div class="sierra-result" id="sierra-result" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════ FORT SCREEN ══════════════ -->
+  <div id="fort-screen">
+    <div class="fort-box anim-in">
+      <div class="fort-header">
+        <div class="fort-title" id="fort-title">Fort Kearny</div>
+        <div class="fort-dist" id="fort-dist">320 MILES FROM INDEPENDENCE</div>
+      </div>
+      <div class="fort-body">
+        <div class="fort-desc-panel">
+          <div class="fort-desc" id="fort-desc"></div>
+          <div class="fort-bonus" id="fort-bonus" style="display:none;"></div>
+        </div>
+        <div class="fort-actions-panel">
+          <div style="font-family:var(--fd);font-size:13px;color:var(--rust);margin-bottom:9px;border-bottom:1px solid var(--bd);padding-bottom:7px;">OPTIONS</div>
+          <button class="fort-action" onclick="fortRest()">💤 Rest 3 Days (heals party)</button>
+          <button class="fort-action" onclick="toggleFortTrade()">🛒 Trade at Outpost</button>
+          <button class="fort-action" onclick="closeFort()">▶ Continue to California</button>
+        </div>
+      </div>
+      <div class="trade-panel" id="trade-panel" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-family:var(--fd);font-size:14px;color:var(--inkm);">Trading Post</span>
+          <span style="font-family:var(--fb);font-size:12px;color:var(--gold);">Cash: $<span id="trade-cash">0</span></span>
+        </div>
+        <div class="trade-grid" id="trade-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ GAME OVER SCREEN ══════════════ -->
+  <div id="gameover-screen">
+    <div class="go-border anim-in" id="go-border">
+      <div class="go-icon" id="go-icon">💀</div>
+      <div class="go-title" id="go-title">Your Party Has Perished</div>
+      <div class="go-msg" id="go-msg"></div>
+      <div class="go-stats" id="go-stats"></div>
+      <button class="btn-gold" onclick="resetGame()">Play Again</button>
+    </div>
+  </div>
+
+</div><!-- #game -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script>
+'use strict';
+// ════════════════════════════════════════════════
+// CONSTANTS & TRAIL DATA
+// ════════════════════════════════════════════════
+const TOTAL_DISTANCE = 2100;
+
+// California Trail GPS path: Independence MO → Sacramento CA
+// Splits from Oregon Trail at Fort Hall/City of Rocks (Idaho), then SW through Nevada
+const TRAIL_PATH = [
+  [39.0917,-94.4153], // Independence, MO
+  [39.7684,-94.8467], // St. Joseph, MO
+  [40.2600,-96.0400], // Marysville, KS (Big Blue River)
+  [40.6461,-99.0028], // Fort Kearny, NE
+  [41.0200,-101.4000],// Western Nebraska
+  [41.7036,-103.3444],// Chimney Rock, NE
+  [42.2097,-104.5461],// Fort Laramie, WY
+  [42.4939,-107.1328],// Sweetwater River
+  [42.4978,-108.8286],// South Pass, WY
+  [42.1239,-110.3486],// Fort Bridger, WY
+  [43.0311,-112.4194],// Fort Hall, ID  ← Trail splits here
+  [42.0742,-113.7067],// City of Rocks, ID
+  [41.9200,-114.5000],// Goose Creek, NV
+  [41.4000,-115.7500],// Humboldt River start (near Wells, NV)
+  [40.8000,-116.4000],// Humboldt River (Battle Mtn area)
+  [40.4000,-117.3000],// Lovelock area
+  [39.9633,-118.5633],// Humboldt Sink
+  [39.2500,-118.9500],// Carson Sink / Start of 40-Mile Desert
+  [39.1500,-119.7500],// Carson River (relief!)
+  [38.8500,-119.9500],// Sierra Nevada foothills
+  [38.5822,-121.4944] // Sacramento, CA 🏁
+];
+
+const MILESTONES = [
+  {name:'Big Blue River Crossing',miles:100,type:'river',icon:'🌊',
+   desc:'The Big Blue River runs high with spring rains. Your first major crossing.',
+   river:{depth:'3 feet',current:'Moderate',ferryFee:4},waterRefill:true},
+  {name:'Fort Kearny',miles:320,type:'fort',icon:'🏰',
+   desc:'Fort Kearny anchors the Platte River road. Thousands of emigrants stream through here each spring. The military post offers modest trading.',
+   tradeMultiplier:1.1,waterRefill:true},
+  {name:'Chimney Rock',miles:550,type:'landmark',icon:'🪨',
+   desc:'The towering spire of Chimney Rock rises from the Nebraska plains — a beacon visible for miles. Every emigrant carves their name here. You are making good time.',
+   waterRefill:false},
+  {name:'Fort Laramie',miles:640,type:'fort',icon:'🏰',
+   desc:'Fort Laramie — the great crossroads of the plains. A busy, vital trading post where the army maintains order. Last major resupply before the Rocky Mountains.',
+   tradeMultiplier:1.2,waterRefill:true},
+  {name:'Independence Rock',miles:820,type:'landmark',icon:'⛰️',
+   desc:'"The Great Register of the Desert." Thousands of pioneer names are scratched into this granite dome. If you arrive here before July 4th, you are on schedule for the Sierra Nevada passes.',
+   waterRefill:false},
+  {name:'South Pass',miles:950,type:'landmark',icon:'🏔️',
+   desc:'South Pass — the Continental Divide! You cross from Atlantic to Pacific waters. At 7,550 feet, the air is cold and thin. You are halfway. California lies ahead.',
+   waterRefill:false},
+  {name:'Fort Bridger',miles:1020,type:'fort',icon:'🏰',
+   desc:'Jim Bridger\'s frontier outpost in a green mountain valley. One of the last civilized stopping points before the long Nevada desert.',
+   tradeMultiplier:1.3,waterRefill:true},
+  {name:'Fort Hall',miles:1150,type:'landmark',icon:'🔀',
+   desc:'Fort Hall, Idaho — the great parting of the ways.\n\nTo the northwest lies Oregon. To the southwest, California and gold.\n\nYour wagons turn south and west. The California Trail. The Golden Road.',
+   waterRefill:true},
+  {name:'City of Rocks',miles:1250,type:'landmark',icon:'🗿',
+   desc:'A fantastical landscape of granite spires rising from the Idaho sagebrush. Emigrants call it the City of Rocks. Past here, the trail enters Nevada Territory — dry, harsh, and unforgiving.',
+   waterRefill:false},
+  {name:'Humboldt River',miles:1380,type:'landmark',icon:'🌿',
+   desc:'The Humboldt River — your guide through Nevada. You will follow it for 300 miles through the Great Basin desert. WARNING: Alkali springs along the route are lethal to oxen. Drink only from the main river channel.',
+   waterRefill:true, alkali:true},
+  {name:'Lassen\'s Trading Post',miles:1500,type:'fort',icon:'🏕️',
+   desc:'A rough-hewn trading post at Lassen\'s Meadows on the Humboldt. Last chance to acquire water and food before the most feared stretch of the entire trail: the Forty-Mile Desert.',
+   tradeMultiplier:1.5,waterRefill:true},
+  {name:'Humboldt Sink',miles:1620,type:'desert',icon:'🏜️',
+   desc:'The Humboldt River has vanished into the sand. Ahead lies the Forty-Mile Desert — the most dreaded section of the California Trail. No water. No grass. Only heat, alkali dust, and the bleached bones of those who came before.',
+   waterRefill:false},
+  {name:'Carson River',miles:1720,type:'river',icon:'💧',
+   desc:'You have survived the Forty-Mile Desert! The cool Carson River is a life-saving sight. Water flows clean and cold from the Sierra Nevada snowpack above. Your party collapses with relief at the bank.',
+   river:{depth:'2.5 feet',current:'Gentle',ferryFee:5},waterRefill:true},
+  {name:'Donner Pass',miles:1870,type:'sierra',icon:'❄️',
+   desc:'The Sierra Nevada Mountains — the last great barrier. Snow-capped peaks and steep granite canyons test the final limits of your endurance. Cross before winter closes the passes forever.',
+   waterRefill:false},
+];
+
+const OCCUPATIONS = {
+  fortyniner:{money:700, foodMult:1.0, merchantDiscount:false, oxenHardy:false, extraFood:0, extraOx:0, label:'Forty-Niner'},
+  merchant:  {money:1400,foodMult:1.0, merchantDiscount:true,  oxenHardy:false, extraFood:0, extraOx:0, label:'Merchant'},
+  farmer:    {money:400, foodMult:0.8, merchantDiscount:false, oxenHardy:false, extraFood:120,extraOx:0,label:'Farmer'},
+  rancher:   {money:900, foodMult:1.0, merchantDiscount:false, oxenHardy:true,  extraFood:0, extraOx:1, label:'Rancher'},
+};
+
+const STORE_ITEMS = {
+  food:   {price:0.20,unit:'lb',   name:'Food Supplies',      desc:'Flour, dried beef, bacon, salt, coffee. Essential for survival on the trail.'},
+  water:  {price:3,   unit:'barrel',name:'Water Barrels (30 gal)',desc:'CRITICAL for Nevada desert. Each barrel holds 30 gallons. Strongly recommended.'},
+  oxen:   {price:40,  unit:'head', name:'Oxen',               desc:'Powerful draft animals. Need at least 2 to pull the wagon. More means faster travel.'},
+  clothing:{price:10, unit:'set',  name:'Clothing Sets',      desc:'Warm wool for mountain passes, durable canvas for the dusty desert trail.'},
+  ammo:   {price:2,   unit:'box',  name:'Ammunition (50 rds)',desc:'Boxes of rifle cartridges for hunting game and protection.'},
+  wheels: {price:10,  unit:'each', name:'Spare Wagon Wheels', desc:'Rocky terrain will break them. Carry at least one spare.'},
+  axles:  {price:10,  unit:'each', name:'Spare Axles',        desc:'A broken axle strands you. A spare saves the journey.'},
+  tongues:{price:10,  unit:'each', name:'Spare Wagon Tongues',desc:'Connects oxen to wagon — without it you cannot move.'},
+  medicine:{price:15, unit:'kit',  name:'Medicine Kits',      desc:'Treat cholera, typhoid, and dysentery. Could save a life.'},
+};
+
+const ILLNESSES = [
+  {name:'Cholera',          severity:0.85,icon:'💀',desc:'The most feared killer on the trail. Cholera strikes without warning — violent illness and rapid death. Contaminated water from crowded camps.'},
+  {name:'Dysentery',        severity:0.6, icon:'🤢',desc:'Severe intestinal suffering from tainted water. A party member writhes in agonizing cramps. Rest and medicine are desperately needed.'},
+  {name:'Typhoid Fever',    severity:0.7, icon:'🌡️',desc:'Raging fever and delirium grip a traveler. Typhoid spreads quickly in the filth of the trail camps.'},
+  {name:'Scurvy',           severity:0.45,icon:'🦷',desc:'Weeks without fresh vegetables have taken a toll. Bleeding gums and weakness slow the party.'},
+  {name:'Measles',          severity:0.5, icon:'🔴',desc:'Red spots, fever, and misery. Measles swept through many California-bound wagon trains.'},
+  {name:'Snakebite',        severity:0.55,icon:'🐍',desc:'A rattlesnake hidden in the sagebrush strikes without warning. The venom acts quickly.'},
+  {name:'Heat Exhaustion',  severity:0.4, icon:'🥵',desc:'The Nevada sun and 110°F temperatures have overwhelmed a member of your party.'},
+  {name:'Mountain Fever',   severity:0.4, icon:'🌡️',desc:'An illness common at high altitude. Chills, aches, and weakness slow your progress.'},
+];
+
+const GOLD_RUSH_EVENTS = [
+  {icon:'⛏️',title:'Gold Fever!',
+   desc:'One of your party has been seized by gold fever. He wants to abandon the wagon and race ahead alone to reach the goldfields first.',
+   choices:s=>[
+     {label:'Let him go — he can meet us there', fn:()=>{
+       const alive=s.party.filter(m=>m.health>0&&m.name!==s.party[0].name);
+       if(alive.length){const v=alive[Math.floor(Math.random()*alive.length)];v.health=0;v.condition='Left for gold';
+       showEventResult(`${v.name} leaves the wagon and disappears into the dust, racing for the goldfields. You press on.`);}
+       else showEventResult('No one leaves. You press on together.');
+     }},
+     {label:'Convince him to stay (takes 1 day)', fn:()=>{
+       G.delayDays+=1;addLog('Spent a day talking sense into a gold-crazed companion.','warn');
+       showEventResult('After a heated argument around the fire, cooler heads prevail. He stays with the party — for now.');
+     }},
+   ]},
+  {icon:'☠️',title:'Alkali Spring!',
+   desc:'Your oxen smell water and before you can stop them, they drink from an alkali spring. The poison water makes them violently ill.',
+   choices:s=>[
+     {label:'Push on and hope for the best', fn:()=>{
+       G.supplies.oxen=Math.max(0,G.supplies.oxen-1);
+       showEventResult('One ox dies from the alkaline poisoning. The others recover slowly. You are down an animal.');
+     }},
+     {label:'Use medicine to treat the oxen', fn:()=>{
+       if(G.supplies.medicine>0){G.supplies.medicine--;G.delayDays+=1;
+       showEventResult('You use a medicine kit on the sick animals. They recover after a day\'s rest.');}
+       else{G.supplies.oxen=Math.max(0,G.supplies.oxen-1);showEventResult('No medicine! An ox dies. The loss is painful.');}
+     }},
+   ]},
+  {icon:'🏹',title:'Shoshone Encounter',
+   desc:'A band of Shoshone riders approaches your wagon. Their intentions are unclear. They gesture toward your supplies and hold up furs.',
+   choices:s=>[
+     {label:'Trade generously — offer food and cloth', fn:()=>{
+       const lostFood=Math.min(40,G.supplies.food);G.supplies.food-=lostFood;G.supplies.water+=30;
+       showEventResult(`You exchange ${lostFood} lbs of food and clothing for 30 gallons of water and safe passage. A fair trade.`);
+     }},
+     {label:'Trade cautiously — a small gift', fn:()=>{
+       const lostFood=Math.min(15,G.supplies.food);G.supplies.food-=lostFood;
+       showEventResult(`A small exchange. ${lostFood} lbs of food for a peaceful parting. They leave without trouble.`);
+     }},
+     {label:'Drive past quickly without trading', fn:()=>{
+       if(Math.random()<0.35){const lostFood=Math.floor(G.supplies.food*0.15);G.supplies.food-=lostFood;
+       addLog('Refused to trade — lost supplies in tense confrontation.','warn');
+       showEventResult(`Your rush past angers them. ${lostFood} lbs of food is thrown from the wagon in the chaos.`);}
+       else showEventResult('You drive past quickly. The riders watch from a distance but do not follow.');
+     }},
+   ]},
+  {icon:'💨',title:'Stampede of Wagons',
+   desc:'A large wagon train moving at breakneck speed rushes past your camp — dozens of Forty-Niners racing to the goldfields.',
+   choices:s=>[
+     {label:'Join their pace for 3 days (exhausting)', fn:()=>{
+       G.distance+=45;G.party.forEach(m=>{if(m.health>0)m.health=Math.max(m.health-12,10);});
+       showEventResult('You push hard to keep up. Gained 45 miles but the party is worn and weary.');
+     }},
+     {label:'Let them pass and keep your own pace', fn:()=>{
+       addLog('You wave as the racing wagons disappear in dust. Steady pace wins the race.','warn');
+       closeEvent();
+     }},
+   ]},
+  {icon:'🌵',title:'Abandoned Wagon',
+   desc:'A wagon sits abandoned by the trail, its owner\'s name still painted on the side. Supplies have been left behind in haste.',
+   choices:s=>[
+     {label:'Salvage what you can', fn:()=>{
+       const food=20+Math.floor(Math.random()*60);const cash=5+Math.floor(Math.random()*20);
+       G.supplies.food+=food;G.money+=cash;
+       showEventResult(`You find ${food} lbs of food, $${cash} in coins, and a spare wheel. Good fortune for your party.`);
+       G.supplies.wheels++;
+     }},
+     {label:'Leave it — press on', fn:()=>{closeEvent();}},
+   ]},
+];
+
+const GOOD_EVENTS = [
+  {icon:'🐟',title:'Excellent Fishing!',
+   desc:'The stream teems with trout. Your party spends an afternoon with lines in the water and feasts tonight.',
+   effect:s=>{s.supplies.food+=55;addLog('Caught 55 lbs of fish. Fine meal tonight!','good');}},
+  {icon:'🌿',title:'Mountain Spring',
+   desc:'A clean, cold mountain spring bubbles from the rocks — a gift from the wilderness. The water is sweet and pure.',
+   effect:s=>{const refill=Math.min(120-s.supplies.water,60);s.supplies.water+=refill;
+   s.party.forEach(m=>{if(m.health>0)m.health=Math.min(m.health+8,100);});
+   addLog(`Fresh spring found. +${refill} gallons of water. Party refreshed.`,'good');}},
+  {icon:'🤝',title:'Fellow Travelers',
+   desc:'A friendly wagon party heading to Sacramento shares their campfire and news from ahead.',
+   effect:s=>{s.supplies.food+=35;addLog('Fellow travelers shared 35 lbs of provisions. Trail solidarity.','good');}},
+  {icon:'🌾',title:'Wild Game Aplenty',
+   desc:'The hills are alive with game. Your hunters go out and return with loaded packs without needing to stop.',
+   effect:s=>{s.supplies.food+=45;addLog('Party hunted successfully. +45 lbs of meat.','good');}},
+  {icon:'💎',title:'Gold Nugget Found!', // Only shows sometimes
+   desc:'Kneeling at a stream to fill water barrels, one of your party spots a glint in the gravel — a small gold nugget!',
+   effect:s=>{const v=8+Math.floor(Math.random()*25);s.money+=v;addLog(`Found a gold nugget! +$${v}.`,'gold');}},
+];
+
+const BAD_WEATHER = [
+  {icon:'⛈️',title:'Severe Thunderstorm',
+   desc:'A violent Great Plains storm darkens the sky. Lightning splits oak trees and driving rain turns the trail to mud.',
+   effect:s=>{s.delayDays+=2;addLog('Severe storm. Delayed 2 days.','warn');}},
+  {icon:'💨',title:'Blinding Dust Storm',
+   desc:'A wall of brown dust sweeps in from the desert. You cannot breathe, see, or move. You cover your faces and wait.',
+   effect:s=>{s.delayDays+=2;s.party.forEach(m=>{if(m.health>0)m.health-=7;});addLog('Dust storm! 2-day delay, party weakened.','warn');}},
+  {icon:'🌨️',title:'Mountain Snowfall',
+   desc:'An early snowstorm blankets the mountain pass. Drifts pile against the wagon wheels.',
+   effect:s=>{s.delayDays+=3;s.party.forEach(m=>{if(m.health>0)m.health-=12;});addLog('Snowstorm in the mountains — 3 days delayed!','warn');}},
+  {icon:'🌫️',title:'Dense Valley Fog',
+   desc:'Thick tule fog fills the valley. You cannot see more than twenty feet. You must halt.',
+   effect:s=>{s.delayDays+=1;addLog('Heavy fog — 1 day delayed.','warn');}},
+  {icon:'🌧️',title:'Days of Rain',
+   desc:'A week of gray skies and drizzle turns the trail soft and slippery. The wagon sinks to its hubs.',
+   effect:s=>{s.delayDays+=2;addLog('Persistent rain — 2 days delayed.','warn');}},
+];
+
+const WAGON_EVENTS = [
+  {icon:'🛞',title:'Wagon Wheel Shatters!',part:'wheels',partName:'spare wheel',
+   desc:'A hidden boulder snaps a wheel spoke and the whole wheel collapses under the wagon\'s weight.'},
+  {icon:'⚙️',title:'Axle Has Cracked!',part:'axles',partName:'spare axle',
+   desc:'A grinding crack signals the axle has given way on a rough desert crossing.'},
+  {icon:'🪵',title:'Wagon Tongue Broken!',part:'tongues',partName:'spare tongue',
+   desc:'The wagon tongue snaps clean off. Without it, the oxen cannot pull the wagon forward.'},
+];
+
+// ════════════════════════════════════════════════
+// GAME STATE
+// ════════════════════════════════════════════════
+let G = {};
+let mapObj = null;
+let wagonMarker = null;
+let stateLayer = null;
+let cityLayer = null;
+let huntAF = null;
+let huntTimer = null;
+let huntData = {};
+let prospectTimer = null;
+let prospectAF = null;
+let prospectData = {};
+let fortTradeMultiplier = 1.2;
+
+function initState() {
+  const occ = G.occupation;
+  const occData = OCCUPATIONS[occ];
+  const names = [0,1,2,3,4].map(i=>document.getElementById('n'+i).value.trim()||['Pioneer','Partner','Child1','Child2','Elder'][i]);
+
+  // Apply occupation bonuses to temp supplies
+  const ts = G.tempSupplies || {food:0,water:0,oxen:0,clothing:0,ammo:0,wheels:0,axles:0,tongues:0,medicine:0};
+  ts.food += occData.extraFood;
+  ts.water = (ts.water || 0); // water in gallons (30 per barrel bought)
+  if(occData.extraOx) ts.oxen++;
+
+  G = {
+    occupation: occ,
+    money: occData.money - (G.spentAtStore || 0),
+    day:1,month:4,year:1849,
+    distance:0,
+    totalDays:0,
+    supplies: {...ts, water: ts.water},
+    party: names.map(n=>({name:n,health:100,condition:'Good',sick:false,sickDays:0})),
+    pace:'steady',
+    rations:'filling',
+    weather:'clear',
+    delayDays:0,
+    wagonHealth:100,
+    nextMilestoneIdx:0,
+    visitedMilestones:[],
+    desertCrossed:false,
+    sierraCrossed:false,
+    log:[],
+    morale:100,
+    totalDays:0,
+    carpenterRepairUsed:false,
+  };
+}
+
+// ════════════════════════════════════════════════
+// MAP (ArcGIS REST API + Leaflet + Layer Controls)
+// ════════════════════════════════════════════════
+
+const CITIES = [
+  {name:'Independence, MO',lat:39.09,lng:-94.42},
+  {name:'St. Joseph, MO',lat:39.77,lng:-94.85},
+  {name:'Council Bluffs, IA',lat:41.26,lng:-95.86},
+  {name:'Kearney, NE',lat:40.70,lng:-99.08},
+  {name:'Scottsbluff, NE',lat:41.87,lng:-103.67},
+  {name:'Casper, WY',lat:42.87,lng:-106.31},
+  {name:'Salt Lake City, UT',lat:40.76,lng:-111.89},
+  {name:'Boise, ID',lat:43.62,lng:-116.20},
+  {name:'Elko, NV',lat:40.83,lng:-115.76},
+  {name:'Winnemucca, NV',lat:40.97,lng:-117.74},
+  {name:'Reno, NV',lat:39.53,lng:-119.81},
+  {name:'Sacramento, CA',lat:38.58,lng:-121.49},
+  {name:'San Francisco, CA',lat:37.77,lng:-122.42},
+];
+
+function setupMap() {
+  if(mapObj){mapObj.remove();mapObj=null;}
+  const el = document.getElementById('map');
+  mapObj = L.map('map',{zoomControl:true,attributionControl:true});
+
+  // ArcGIS REST API — World Terrain Base (no political boundaries, no labels)
+  // Endpoint: https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{z}/{y}/{x}
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{z}/{y}/{x}',{
+    attribution:'Tiles &copy; Esri, USGS, NOAA | ArcGIS REST API — World Terrain Base',
+    maxZoom:12, minZoom:4
+  }).addTo(mapObj);
+
+  // California Trail route polyline (dashed red-brown)
+  const trailLine = L.polyline(TRAIL_PATH,{
+    color:'#8b2a10',weight:3.5,opacity:0.88,
+    dashArray:'9,7',lineCap:'round',lineJoin:'round'
+  }).addTo(mapObj);
+
+  // ── CITIES LAYER (toggleable, default OFF) ──
+  cityLayer = L.layerGroup();
+  CITIES.forEach(c=>{
+    const icon = L.divIcon({
+      html:`<div style="background:var(--ink);color:var(--paper);font-family:'Courier Prime',monospace;font-size:10px;
+        padding:2px 6px;border:1px solid var(--goldb);white-space:nowrap;
+        box-shadow:1px 1px 4px rgba(0,0,0,0.5);">${c.name}</div>`,
+      className:'',iconAnchor:[0,10]
+    });
+    L.marker([c.lat,c.lng],{icon}).addTo(cityLayer);
+  });
+
+  // ── STATE BORDERS LAYER (toggleable, default OFF) ──
+  stateLayer = L.layerGroup(); // placeholder until GeoJSON loads
+  loadStatesBorders();
+
+  // ── LANDMARK MARKERS ──
+  MILESTONES.forEach(lm=>{
+    const pos = getTrailPos(lm.miles);
+    const bg = lm.type==='river'?'#1a3848':lm.type==='fort'?'#3a1408':lm.type==='desert'?'#6a3000':lm.type==='sierra'?'#1a2838':'#284020';
+    const ih = `<div style="background:${bg};width:24px;height:24px;border-radius:50%;border:2px solid #f0dcac;
+      display:flex;align-items:center;justify-content:center;font-size:12px;
+      box-shadow:0 2px 6px rgba(0,0,0,0.5);">${lm.icon}</div>`;
+    const mk = L.marker(pos,{icon:L.divIcon({html:ih,className:'',iconSize:[24,24],iconAnchor:[12,12]})}).addTo(mapObj);
+    mk.bindPopup(`<strong>${lm.name}</strong><br><span style="font-size:10px">${lm.miles} mi from Independence</span>`);
+  });
+
+  // ── WAGON MARKER ──
+  const wagIcon = L.divIcon({
+    html:`<div style="font-size:24px;cursor:default;filter:drop-shadow(2px 2px 3px rgba(0,0,0,0.6));" title="Your Wagon">⛟</div>`,
+    className:'',iconSize:[28,28],iconAnchor:[14,14]
+  });
+  wagonMarker = L.marker(TRAIL_PATH[0],{icon:wagIcon,zIndexOffset:1000}).addTo(mapObj);
+
+  // ── LEAFLET LAYER CONTROL (state borders + cities, both OFF by default) ──
+  const overlays = {
+    '🗺 State Borders': stateLayer,
+    '🏙 Major Cities': cityLayer
+  };
+  L.control.layers(null,overlays,{position:'topright',collapsed:false}).addTo(mapObj);
+
+  // Fit bounds
+  mapObj.fitBounds(trailLine.getBounds(),{padding:[30,30]});
+}
+
+function loadStatesBorders() {
+  // Load US States TopoJSON from CDN, convert to GeoJSON, add as toggleable layer
+  fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json')
+    .then(r=>r.json())
+    .then(us=>{
+      if(!window.topojson){console.warn('topojson not loaded');return;}
+      const geojson = topojson.feature(us,us.objects.states);
+      const geoLayer = L.geoJSON(geojson,{
+        style:{color:'#7a5028',weight:1.2,opacity:0.65,fillOpacity:0,dashArray:'4,4'}
+      });
+      // Add to the stateLayer group
+      stateLayer.addLayer(geoLayer);
+    })
+    .catch(()=>{
+      // Fallback: simple boundary boxes for key western states
+      const fallbackStates = [
+        [[36.97,-109.05],[41.00,-109.05],[41.00,-102.05],[36.97,-102.05],[36.97,-109.05]],// CO
+        [[36.99,-114.05],[42.00,-114.05],[42.00,-117.24],[36.99,-117.24],[36.99,-114.05]],// NV
+        [[38.99,-120.00],[42.00,-120.00],[42.00,-124.41],[38.99,-124.41],[38.99,-120.00]],// CA-W
+      ];
+      fallbackStates.forEach(pts=>{
+        stateLayer.addLayer(L.polyline(pts,{color:'#7a5028',weight:1.2,opacity:0.6,dashArray:'5,4'}));
+      });
+    });
+}
+
+function getTrailPos(miles) {
+  const pct = Math.max(0,Math.min(1,miles/TOTAL_DISTANCE));
+  const idx = pct*(TRAIL_PATH.length-1);
+  const lo = Math.floor(idx), hi = Math.min(lo+1,TRAIL_PATH.length-1);
+  const t = idx-lo;
+  return [TRAIL_PATH[lo][0]+t*(TRAIL_PATH[hi][0]-TRAIL_PATH[lo][0]),
+          TRAIL_PATH[lo][1]+t*(TRAIL_PATH[hi][1]-TRAIL_PATH[lo][1])];
+}
+
+function updateWagonOnMap() {
+  if(!mapObj||!wagonMarker)return;
+  wagonMarker.setLatLng(getTrailPos(G.distance));
+  mapObj.panTo(getTrailPos(G.distance),{animate:true,duration:0.8});
+}
+
+// ════════════════════════════════════════════════
+// SCREEN HELPERS
+// ════════════════════════════════════════════════
+function show(id,d='block'){document.getElementById(id).style.display=d;}
+function hide(id){document.getElementById(id).style.display='none';}
+
+function showTitle(){
+  ['occ-screen','store-screen','travel-screen','gameover-screen'].forEach(hide);
+  show('title-screen','flex');
+}
+function showOccupation(){
+  hide('title-screen');hide('store-screen');
+  show('occ-screen','flex');
+}
+function showStore(){
+  if(!G.occupation)return;
+  hide('occ-screen');
+  show('store-screen','flex');
+  G.tempSupplies={food:0,water:0,oxen:0,clothing:0,ammo:0,wheels:0,axles:0,tongues:0,medicine:0};
+  G.money = OCCUPATIONS[G.occupation].money;
+  renderStore();
+}
+function startJourney(){
+  hide('store-screen');
+  initState();
+  show('travel-screen','flex');
+  document.getElementById('btn-prospect').style.display = G.occupation==='fortyniner'?'flex':'none';
+  setTimeout(()=>{
+    setupMap();
+    updateUI();
+    addLog(`April 1, 1849 — Your wagon departs Independence, Missouri. Sacramento lies ${TOTAL_DISTANCE} miles to the west. Gold awaits.`,'landmark');
+    addLog(`Occupation: ${OCCUPATIONS[G.occupation].label}. Party of 5. God speed.`);
+  },100);
+}
+
+function selectOcc(occ,el){
+  document.querySelectorAll('.occ-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  G.occupation=occ;
+  const btn=document.getElementById('occ-next');
+  btn.disabled=false;btn.style.opacity='1';btn.style.cursor='pointer';
+}
+
+// ════════════════════════════════════════════════
+// STORE LOGIC
+// ════════════════════════════════════════════════
+function renderStore(){
+  const budget = OCCUPATIONS[G.occupation].money;
+  document.getElementById('store-budget').textContent = `$${budget}`;
+  G.tempSupplies={food:0,water:0,oxen:0,clothing:0,ammo:0,wheels:0,axles:0,tongues:0,medicine:0};
+
+  document.getElementById('store-items-wrap').innerHTML = Object.entries(STORE_ITEMS).map(([k,item])=>`
+    <div class="store-item">
+      <div class="si-name">${item.name}</div>
+      <div class="si-price">$${item.price.toFixed?.(2)||item.price} / ${item.unit}</div>
+      <div class="si-desc">${item.desc}</div>
+      <div class="si-controls">
+        <button class="sq-btn" onclick="storeQty('${k}',-10)">−−</button>
+        <button class="sq-btn" onclick="storeQty('${k}',-1)">−</button>
+        <div class="sq-disp" id="sq-${k}">0</div>
+        <button class="sq-btn" onclick="storeQty('${k}',1)">+</button>
+        <button class="sq-btn" onclick="storeQty('${k}',10)">++</button>
+        <div class="si-total" id="st-${k}">$0</div>
+      </div>
+    </div>`).join('');
+  updateStoreSummary();
+}
+
+function storeQty(k,delta){
+  const price = STORE_PRICES_MAP[k];
+  const budget = OCCUPATIONS[G.occupation].money;
+  let cur = G.tempSupplies[k];
+  let nv = Math.max(0,cur+delta);
+  if(k==='oxen')nv=Math.min(nv,9);
+  const spent = getStoreSpent()-cur*price+nv*price;
+  if(spent>budget) nv=Math.floor((budget-getStoreSpent()+cur*price)/price);
+  nv=Math.max(0,nv);
+  G.tempSupplies[k]=nv;
+
+  // Water: store in gallons (each barrel = 30 gal)
+  const displayVal = k==='water'?nv:nv;
+  document.getElementById('sq-'+k).textContent=nv;
+  document.getElementById('st-'+k).textContent=`$${(nv*price).toFixed(2)}`;
+  updateStoreSummary();
+}
+
+const STORE_PRICES_MAP = {food:0.20,water:3,oxen:40,clothing:10,ammo:2,wheels:10,axles:10,tongues:10,medicine:15};
+
+function getStoreSpent(){
+  return Object.entries(G.tempSupplies).reduce((s,[k,v])=>s+v*(STORE_PRICES_MAP[k]||0),0);
+}
+
+function updateStoreSummary(){
+  const budget=OCCUPATIONS[G.occupation].money;
+  const spent=getStoreSpent();
+  const rem=budget-spent;
+
+  const rows=document.getElementById('store-summary-rows');
+  rows.innerHTML=Object.entries(G.tempSupplies).filter(([k,v])=>v>0&&STORE_ITEMS[k]).map(([k,v])=>`
+    <div class="sum-row"><span>${STORE_ITEMS[k].name.split('(')[0].trim()}: ${v}</span><span>$${(v*STORE_PRICES_MAP[k]).toFixed(2)}</span></div>
+  `).join('')+`<div class="sum-row sum-total"><span>Total</span><span>$${spent.toFixed(2)}</span></div>`;
+
+  document.getElementById('store-remaining').textContent=`$${rem.toFixed(2)}`;
+  document.getElementById('store-remaining').style.color=rem<0?'var(--rust)':'var(--inkm)';
+
+  // Store tip
+  let tip='';
+  const ts=G.tempSupplies;
+  if(ts.oxen<2) tip='⚠️ You need at least 2 oxen to move the wagon!';
+  else if(ts.food<200) tip='⚠️ Buy more food — 400+ lbs recommended for a party of 5.';
+  else if(ts.water<2) tip='🚨 Buy water barrels! Nevada is a lethal desert — you need 60+ gallons minimum.';
+  else if(ts.wheels===0) tip='💡 Carry at least 1 spare wheel — rocky Nevada terrain is merciless.';
+  else if(ts.medicine<2) tip='💡 Medicine kits treat cholera and dysentery — both are common and deadly.';
+  else tip='✓ Well-outfitted. Keep some cash for trading posts and ferry crossings.';
+  document.getElementById('store-tip').textContent=tip;
+
+  const canDepart=ts.oxen>=2;
+  const btn=document.getElementById('store-depart');
+  btn.disabled=!canDepart;btn.style.opacity=canDepart?'1':'0.5';btn.style.cursor=canDepart?'pointer':'not-allowed';
+
+  // Store water as gallons in tempSupplies for initState
+  G.tempSupplies._waterGallons = ts.water*30;
+  G.spentAtStore = spent;
+}
+
+// ════════════════════════════════════════════════
+// DATE HELPERS
+// ════════════════════════════════════════════════
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MDAYS=[31,28,31,30,31,30,31,31,30,31,30,31];
+
+function advanceDate(days=1){
+  for(let i=0;i<days;i++){
+    G.day++;G.totalDays++;
+    if(G.day>MDAYS[G.month-1]){G.day=1;G.month++;if(G.month>12){G.month=1;G.year++;}}
+  }
+}
+
+function dateStr(){return `${MONTHS[G.month-1]} ${G.day}, ${G.year}`;}
+
+function isLateForSierra(){
+  // Oct 20 or later is dangerous in Sierra
+  return G.month>10||(G.month===10&&G.day>=20);
+}
+function isTooLate(){
+  // Nov 15 or later — mountain passes close
+  return G.month>=11&&G.day>=15;
+}
+
+// ════════════════════════════════════════════════
+// PACE / RATIONS
+// ════════════════════════════════════════════════
+function setPace(p,btn){
+  G.pace=p;
+  document.querySelectorAll('#pace-ctrl .ctrl-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function setRations(r,btn){
+  G.rations=r;
+  document.querySelectorAll('#ration-ctrl .ctrl-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function getPaceMiles(){
+  const base={steady:14,strenuous:20,grueling:26}[G.pace];
+  const oxP=G.supplies.oxen<2?0:G.supplies.oxen<3?0.8:1.0;
+  const wxP={clear:1.0,rain:0.7,storm:0.4,snow:0.5,fog:0.65,dust:0.6}[G.weather]||1.0;
+  const desertP=isDesertTerrain()?0.85:1.0;
+  return Math.floor(base*oxP*wxP*desertP);
+}
+
+function isDesertTerrain(){return G.distance>=1250&&G.distance<1720;}
+
+function getFoodPerDay(){
+  const alive=G.party.filter(m=>m.health>0).length;
+  const base={filling:3.0,meager:2.0,bare:1.0}[G.rations];
+  return alive*base*OCCUPATIONS[G.occupation].foodMult;
+}
+
+function getWaterPerDay(){
+  const alive=G.party.filter(m=>m.health>0).length;
+  const base={filling:2.5,meager:1.5,bare:0.8}[G.rations];
+  const desertMult=isDesertTerrain()?2.2:1.0;
+  return alive*base*desertMult;
+}
+
+// ════════════════════════════════════════════════
+// CORE GAME LOGIC
+// ════════════════════════════════════════════════
+function getLiving(){return G.party.filter(m=>m.health>0);}
+
+function getHealthDelta(member){
+  if(member.health<=0)return 0;
+  let d=0;
+  const foodOK=G.supplies.food>=getFoodPerDay();
+  const waterOK=G.supplies.water>=getWaterPerDay();
+  if(G.rations==='filling'&&foodOK&&waterOK) d+=1;
+  else if(G.rations==='meager') d-=1;
+  else if(G.rations==='bare') d-=3;
+  if(!foodOK) d-=6;
+  if(!waterOK) d-=(isDesertTerrain()?12:5);
+  if(member.sickDays>0){d-=4;member.sickDays--;if(member.sickDays<=0){member.sick=false;member.condition='Recovering';}}
+  if(G.pace==='strenuous') d-=1;
+  if(G.pace==='grueling') d-=3;
+  if(G.weather==='snow'||G.weather==='storm') d-=2;
+  return d;
+}
+
+function getCondition(h){
+  if(h<=0)return'Dead';
+  if(h>=85)return'Good';
+  if(h>=65)return'Fair';
+  if(h>=40)return'Poor';
+  if(h>=20)return'Very Poor';
+  return'Critical';
+}
+
+function getMorale(){
+  const alive=getLiving();
+  if(!alive.length)return 0;
+  const avgH=alive.reduce((s,m)=>s+m.health,0)/alive.length;
+  const foodBonus=G.supplies.food>getFoodPerDay()*10?15:(G.supplies.food<getFoodPerDay()*2?-25:0);
+  const waterBonus=G.supplies.water>getWaterPerDay()*5?10:(G.supplies.water<getWaterPerDay()?-20:0);
+  return Math.max(0,Math.min(100,avgH+foodBonus+waterBonus));
+}
+
+function getMoraleText(m){
+  if(m>=80)return'Excellent';if(m>=60)return'Good';if(m>=40)return'Fair';
+  if(m>=20)return'Low';return'Desperate';
+}
+
+function consumeResources(moving){
+  // Food
+  const food=getFoodPerDay();
+  G.supplies.food=Math.max(0,G.supplies.food-food);
+  if(G.supplies.food<=0) addLog('Food exhausted! Your party goes hungry.','critical');
+
+  // Water
+  const water=getWaterPerDay();
+  G.supplies.water=Math.max(0,G.supplies.water-water);
+  if(G.supplies.water<=0&&getLiving().length>0) addLog('Water gone! ' +(isDesertTerrain()?'In this desert heat, dehydration kills fast.':'Your party suffers from thirst.'),'critical');
+
+  // Health update
+  G.party.forEach(m=>{
+    if(m.health<=0)return;
+    const d=getHealthDelta(m);
+    m.health=Math.max(0,Math.min(100,m.health+d));
+    m.condition=getCondition(m.health);
+    if(m.health<=0){addLog(`${m.name} has died.`,'critical');m.condition='Dead';}
+  });
+
+  // Oxen exhaustion
+  if(moving&&G.pace==='grueling'&&Math.random()<(OCCUPATIONS[G.occupation].oxenHardy?0.08:0.18)){
+    G.supplies.oxen=Math.max(0,G.supplies.oxen-1);
+    addLog('An ox collapses from exhaustion on the trail!','critical');
+  }
+}
+
+function updateWeather(){
+  const m=G.month;
+  const pool = (m<=4||m>=10)
+    ? ['clear','rain','storm','snow','fog','clear','clear']
+    : isDesertTerrain()
+      ? ['clear','clear','clear','dust','dust','fog','clear','clear']
+      : ['clear','clear','rain','fog','clear','clear','clear'];
+  G.weather=pool[Math.floor(Math.random()*pool.length)];
+}
+
+function triggerRandomEvent(){
+  const r=Math.random();
+
+  if(r<0.27){
+    // Illness
+    const alive=getLiving().filter(m=>!m.sick);
+    if(!alive.length){closeEventNoLandmark();return;}
+    const victim=alive[Math.floor(Math.random()*alive.length)];
+    const ill=ILLNESSES[Math.floor(Math.random()*ILLNESSES.length)];
+    victim.sick=true;victim.sickDays=Math.floor(3+Math.random()*5);victim.condition=ill.name;
+    showEvent({
+      icon:ill.icon,title:`${ill.name}!`,
+      desc:ill.desc+`\n\n${victim.name} has been struck down.`,
+      choices:[
+        {label:`Use Medicine Kit (${G.supplies.medicine} available)`,fn:()=>{
+          if(G.supplies.medicine>0){G.supplies.medicine--;victim.sickDays=Math.max(1,Math.floor(victim.sickDays*0.3));
+          victim.health=Math.max(10,victim.health-15);
+          showEventResult(`Medicine administered. ${victim.name}'s suffering eases. Recovery will be faster.`);}
+          else{victim.health-=25;showEventResult(`No medicine! ${victim.name} must endure untreated.`);}
+        }},
+        {label:'Rest 2 days',fn:()=>{G.delayDays+=2;victim.health-=10;showEventResult(`You make camp. ${victim.name} rests but remains weakened.`);}},
+        {label:'Press on — you cannot afford to stop',fn:()=>{victim.health-=30;showEventResult(`You press on. ${victim.name} grows critically ill under the strain of travel.`);}},
+      ]
+    });
+  }
+  else if(r<0.43){
+    // Wagon damage
+    const wev=WAGON_EVENTS[Math.floor(Math.random()*WAGON_EVENTS.length)];
+    const has=G.supplies[wev.part]>0;
+    showEvent({
+      icon:wev.icon,title:wev.title,
+      desc:wev.desc+(has?'\n\nYou have a spare part.':'\n\nYou have NO spare!'),
+      choices:has?[
+        {label:`Replace with spare ${wev.partName}`,fn:()=>{
+          G.supplies[wev.part]--;G.wagonHealth=Math.min(100,G.wagonHealth+15);
+          showEventResult('Repair completed. The wagon rolls again.');
+        }},
+      ]:[
+        {label:'Improvise a field repair (2-day delay)',fn:()=>{
+          G.delayDays+=2;G.wagonHealth-=20;
+          showEventResult('A rough repair holds the wagon together — barely. You lose 2 days but can continue.');
+        }},
+        {label:'Abandon heavy cargo to reduce load',fn:()=>{
+          const lf=Math.floor(G.supplies.food*0.25);G.supplies.food-=lf;
+          G.delayDays+=1;showEventResult(`You discard ${lf} lbs of food and improvise. The wagon holds.`);
+        }},
+      ]
+    });
+  }
+  else if(r<0.52){
+    // Gold Rush specific events
+    if(G.occupation==='fortyniner'&&Math.random()<0.35){
+      // Higher chance of gold rush events for Forty-Niners
+      const ev=GOLD_RUSH_EVENTS[Math.floor(Math.random()*GOLD_RUSH_EVENTS.length)];
+      showEvent({icon:ev.icon,title:ev.title,desc:ev.desc,choices:ev.choices(G)});
+    } else {
+      const ev=GOLD_RUSH_EVENTS[Math.floor(Math.random()*GOLD_RUSH_EVENTS.length)];
+      showEvent({icon:ev.icon,title:ev.title,desc:ev.desc,choices:ev.choices(G)});
+    }
+  }
+  else if(r<0.65){
+    // Weather
+    const wev=BAD_WEATHER[Math.floor(Math.random()*BAD_WEATHER.length)];
+    showEvent({icon:wev.icon,title:wev.title,desc:wev.desc,
+      choices:[{label:'Wait it out',fn:()=>{wev.effect(G);showEventResult('You hunker down and wait for conditions to improve.');}}]
+    });
+  }
+  else if(r<0.8){
+    // Good events
+    const gev=GOOD_EVENTS[Math.floor(Math.random()*GOOD_EVENTS.length)];
+    showEvent({icon:gev.icon,title:gev.title,desc:gev.desc,
+      choices:[{label:'Wonderful! Press on.',fn:()=>{gev.effect(G);closeEvent();}}]
+    });
+  }
+  else {
+    closeEventNoLandmark();
+  }
+}
+
+function closeEventNoLandmark(){
+  checkMilestone();
+  if(!checkGameOver()) updateUI();
+}
+
+// ════════════════════════════════════════════════
+// ADVANCE DAY
+// ════════════════════════════════════════════════
+function advanceDay(){
+  if(G.supplies.oxen<2){
+    showEvent({icon:'🐂',title:'No Oxen!',
+      desc:'You need at least 2 oxen to move the wagon.',
+      choices:[{label:'Understood',fn:()=>closeEvent()}]
+    });return;
+  }
+  if(G.delayDays>0){
+    addLog(`Camp delay — ${G.delayDays} day(s) remaining.`,'warn');
+    G.delayDays--;advanceDate();
+    consumeResources(false);updateUI();return;
+  }
+
+  const miles=getPaceMiles();
+  G.distance=Math.min(G.distance+miles,TOTAL_DISTANCE);
+  advanceDate();
+
+  consumeResources(true);
+  updateWeather();
+
+  // 25% random event chance
+  if(Math.random()<0.25){triggerRandomEvent();return;}
+
+  checkMilestone();
+  if(!checkGameOver()) updateUI();
+
+  addLog(`${dateStr()} — Traveled ${miles} mi. Total: ${G.distance} of ${TOTAL_DISTANCE} mi.`);
+}
+
+function restDay(){
+  G.totalDays++;advanceDate();
+  consumeResources(false);
+  G.party.forEach(m=>{if(m.health>0&&m.health<100)m.health=Math.min(100,m.health+10);m.condition=getCondition(m.health);});
+  addLog('You rest at camp. The party recovers some strength.','good');
+  if(!checkGameOver())updateUI();
+}
+
+function checkStatus(){
+  const lines=G.party.map(m=>`${m.name}: ${m.condition} (${Math.floor(m.health)}%)`).join('\n');
+  const fd=Math.floor(G.supplies.food);const wd=Math.floor(G.supplies.water);
+  const fdDays=fd>0?Math.floor(fd/getFoodPerDay()):0;
+  const wdDays=wd>0?Math.floor(wd/getWaterPerDay()):0;
+  showEvent({
+    icon:'📋',title:'Status Report',
+    desc:`${lines}\n\nFood: ${fd} lbs (≈${fdDays} days)\nWater: ${wd} gal (≈${wdDays} days)\nOxen: ${G.supplies.oxen} | Ammo: ${G.supplies.ammo} | Medicine: ${G.supplies.medicine}\nMoney: $${G.money.toFixed(2)}\nWagon: ${G.wagonHealth}%\nDate: ${dateStr()} | Distance: ${G.distance}/${TOTAL_DISTANCE} mi`,
+    choices:[{label:'Close',fn:()=>closeEvent()}]
+  });
+}
+
+// ════════════════════════════════════════════════
+// MILESTONE CHECKING
+// ════════════════════════════════════════════════
+function checkMilestone(){
+  const upcoming=MILESTONES.filter(m=>m.miles<=G.distance&&!G.visitedMilestones.includes(m.name));
+  if(!upcoming.length)return false;
+  const lm=upcoming[0];
+  G.visitedMilestones.push(lm.name);
+
+  // Auto water refill at water sources
+  if(lm.waterRefill){
+    const before=G.supplies.water;
+    G.supplies.water=Math.min(G.supplies.water+120,120);
+    if(G.supplies.water>before) addLog(`Water barrels refilled at ${lm.name}. +${Math.floor(G.supplies.water-before)} gal.`,'good');
+  }
+
+  if(lm.type==='river'){showRiver(lm);return true;}
+  else if(lm.type==='fort'){showFort(lm);return true;}
+  else if(lm.type==='desert'){showDesert();return true;}
+  else if(lm.type==='sierra'){showSierra();return true;}
+  else{showLandmarkNotice(lm);return true;}
+}
+
+function showLandmarkNotice(lm){
+  let note='';
+  if(lm.miles===820){
+    const onSchedule=G.month<7||(G.month===7&&G.day<=4);
+    note='\n\n'+(onSchedule?'✓ You are on schedule! Independence Rock by July 4th bodes well for the Sierra Nevada crossings.':'⚠️ You are behind schedule. Push harder — you must cross the Sierra Nevada before November snow.');
+  }
+  if(lm.miles===1150){
+    note='\n\n— Fort Hall, 1849 —\n\nThe road to Oregon turns northwest. Your wagons turn southwest toward California and gold.';
+  }
+  showEvent({icon:lm.icon,title:lm.name,desc:lm.desc+note,
+    choices:[{label:'Continue the journey →',fn:()=>closeEvent()}]
+  });
+  addLog(`Reached ${lm.name}!`,'landmark');
+}
+
+function checkGameOver(){
+  const alive=getLiving().length;
+  if(alive===0){showGameOver(false,'Your entire party has perished on the trail.');return true;}
+  if(G.party[0].health<=0){showGameOver(false,'You have perished. Without a leader, your party does not survive long.');return true;}
+  if(G.distance>=TOTAL_DISTANCE){showGameOver(true,'');return true;}
+  if(isTooLate()&&G.distance<1870){showGameOver(false,'The Sierra Nevada mountain passes have been closed by November snows. Your party cannot cross. There is no way forward.');return true;}
+  return false;
+}
+
+// ════════════════════════════════════════════════
+// UI UPDATE
+// ════════════════════════════════════════════════
+function updateUI(){
+  // Topbar
+  document.getElementById('tb-date').textContent=dateStr();
+  document.getElementById('tb-dist').textContent=G.distance+' mi';
+  document.getElementById('tb-remain').textContent=(TOTAL_DISTANCE-G.distance)+' mi';
+  const wxMap={clear:'Clear ☀️',rain:'Rainy 🌧️',storm:'Storm ⛈️',snow:'Snow ❄️',fog:'Fog 🌫️',dust:'Dusty 💨'};
+  document.getElementById('tb-weather').textContent=wxMap[G.weather]||'Clear ☀️';
+  document.getElementById('tb-morale').textContent=getMoraleText(getMorale());
+
+  // Party list
+  document.getElementById('party-list').innerHTML=G.party.map(m=>{
+    const p=Math.max(0,m.health);
+    const cls=p>=85?'hb-good':p>=65?'hb-fair':p>=40?'hb-poor':p>0?'hb-crit':'hb-dead';
+    return `<div class="party-row">
+      <span class="pr-name${p<=0?' dead':''}">${m.name}</span>
+      <div class="hbar-wrap"><div class="hbar ${cls}" style="width:${p}%"></div></div>
+      <span class="pr-cond" style="color:${p<=0?'#888':p<40?'var(--rust)':'var(--inkl)'}">${m.condition}</span>
+    </div>`;
+  }).join('');
+
+  // Supply list
+  const s=G.supplies;
+  const foodWarn=s.food<getFoodPerDay()*3;
+  const waterWarn=s.water<getWaterPerDay()*3;
+  const waterCrit=s.water<getWaterPerDay()&&isDesertTerrain();
+  document.getElementById('supply-list').innerHTML=`
+    <div class="sup-row"><span class="sup-icon">🍖</span><span class="sup-name">Food</span><span class="sup-val${foodWarn?' sup-warn':''}">${Math.floor(s.food)} lbs</span></div>
+    <div class="sup-row"><span class="sup-icon">💧</span><span class="sup-name">Water</span><span class="sup-val${waterCrit?' sup-crit':waterWarn?' sup-warn':''}">${Math.floor(s.water)} gal${isDesertTerrain()?' 🏜':''}</span></div>
+    <div class="sup-row"><span class="sup-icon">🐂</span><span class="sup-name">Oxen</span><span class="sup-val${s.oxen<2?' sup-warn':''}">${s.oxen}</span></div>
+    <div class="sup-row"><span class="sup-icon">💰</span><span class="sup-name">Money</span><span class="sup-val">$${G.money.toFixed(2)}</span></div>
+    <div class="sup-row"><span class="sup-icon">🔫</span><span class="sup-name">Ammo</span><span class="sup-val">${s.ammo} boxes</span></div>
+    <div class="sup-row"><span class="sup-icon">💊</span><span class="sup-name">Medicine</span><span class="sup-val">${s.medicine} kits</span></div>
+    <div class="sup-row"><span class="sup-icon">🛞</span><span class="sup-name">Spare Parts</span><span class="sup-val">W:${s.wheels} A:${s.axles} T:${s.tongues}</span></div>
+  `;
+  document.getElementById('trail-prog').style.width=(G.distance/TOTAL_DISTANCE*100).toFixed(1)+'%';
+  updateWagonOnMap();
+}
+
+function addLog(msg,type=''){
+  const panel=document.getElementById('log-panel');
+  const d=document.createElement('div');
+  d.className=`log-entry${type?' log-'+type:''}`;
+  d.innerHTML=`<span class="log-date">[${dateStr()}]</span> ${msg}`;
+  panel.appendChild(d);
+  panel.scrollTop=panel.scrollHeight;
+}
+
+// ════════════════════════════════════════════════
+// EVENT MODAL
+// ════════════════════════════════════════════════
+function showEvent(evt){
+  document.getElementById('ev-title').textContent=evt.title;
+  document.getElementById('ev-icon').textContent=evt.icon;
+  document.getElementById('ev-body').textContent=evt.desc;
+  document.getElementById('ev-result').style.display='none';
+  const ch=document.getElementById('ev-choices');
+  ch.innerHTML=evt.choices.map((c,i)=>`<button class="choice-btn" onclick="handleChoice(${i})">${c.label}</button>`).join('');
+  ch._choices=evt.choices;
+  show('event-modal','flex');
+}
+
+function handleChoice(i){
+  const c=document.getElementById('ev-choices')._choices;
+  if(c&&c[i])c[i].fn();
+}
+
+function showEventResult(msg){
+  document.getElementById('ev-choices').innerHTML='';
+  const r=document.getElementById('ev-result');
+  r.textContent=msg;r.style.display='block';
+  setTimeout(()=>{
+    const btn=document.createElement('button');
+    btn.className='choice-btn';btn.textContent='Continue your journey →';
+    btn.onclick=()=>closeEvent();
+    document.getElementById('ev-choices').appendChild(btn);
+  },700);
+}
+
+function closeEvent(){
+  hide('event-modal');
+  checkMilestone();
+  if(!checkGameOver())updateUI();
+}
+
+// ════════════════════════════════════════════════
+// HUNTING MINI-GAME
+// ════════════════════════════════════════════════
+function goHunting(){
+  if(G.supplies.ammo<=0){
+    showEvent({icon:'🔫',title:'No Ammunition',desc:'You have no ammunition left. Purchase more at the next trading post.',choices:[{label:'Return to camp',fn:()=>closeEvent()}]});return;
+  }
+  hide('event-modal');show('hunt-screen','flex');startHunting();
+}
+
+function startHunting(){
+  const canvas=document.getElementById('hunt-canvas');
+  const wrap=canvas.parentElement;
+  canvas.width=Math.min(900,wrap.clientWidth-16);
+  canvas.height=Math.min(350,wrap.clientHeight-16);
+  const ctx=canvas.getContext('2d');
+
+  huntData={ammo:G.supplies.ammo*50,foodGained:0,animals:[],secondsLeft:40,running:true,spawnTimer:0,maxCarry:200};
+  document.getElementById('h-ammo').textContent=huntData.ammo;
+  document.getElementById('h-food').textContent='0 lbs';
+  document.getElementById('h-time').textContent='40s';
+  document.getElementById('h-tbar').style.width='100%';
+  canvas.onclick=doShot;
+
+  huntTimer=setInterval(()=>{
+    huntData.secondsLeft--;
+    document.getElementById('h-time').textContent=huntData.secondsLeft+'s';
+    document.getElementById('h-tbar').style.width=(huntData.secondsLeft/40*100)+'%';
+    if(huntData.secondsLeft<=0||huntData.ammo<=0)endHunting();
+  },1000);
+
+  drawHunt(ctx,canvas);
+}
+
+function spawnAnimal(canvas){
+  const types=[
+    {t:'rabbit',w:24,h:20,spd:-2.8,food:5,col:'#6a5030'},
+    {t:'deer',  w:46,h:38,spd:-1.9,food:100,col:'#4a3020'},
+    {t:'deer',  w:46,h:38,spd:-1.9,food:100,col:'#4a3020'},
+    {t:'bear',  w:58,h:44,spd:-1.2,food:300,col:'#2a1a10'},
+    {t:'buffalo',w:68,h:50,spd:-1.0,food:400,col:'#1e1208'},
+    {t:'rabbit',w:24,h:20,spd:-3.0,food:5,col:'#6a5030'},
+  ];
+  const tp=types[Math.floor(Math.random()*types.length)];
+  const gY=canvas.height*0.72;
+  huntData.animals.push({...tp,x:canvas.width+10,y:gY-tp.h,hit:false,opacity:1,bob:0,bobDir:1});
+}
+
+function drawHunt(ctx,canvas){
+  if(!huntData.running)return;
+  huntData.spawnTimer++;
+  if(huntData.spawnTimer>=65&&huntData.animals.length<5){
+    huntData.spawnTimer=0;spawnAnimal(canvas);
+    if(Math.random()<0.25)spawnAnimal(canvas);
+  }
+
+  const W=canvas.width,H=canvas.height,gY=H*0.72;
+  // Sky
+  const sky=ctx.createLinearGradient(0,0,0,gY);
+  sky.addColorStop(0,'#7ab0d0');sky.addColorStop(1,'#b8d8e8');
+  ctx.fillStyle=sky;ctx.fillRect(0,0,W,gY);
+  // Hills
+  ctx.fillStyle='#8aaa78';
+  ctx.beginPath();ctx.moveTo(0,gY);
+  for(let x=0;x<=W;x+=60)ctx.lineTo(x,gY-(Math.sin(x*0.02)*25+30));
+  ctx.lineTo(W,gY);ctx.closePath();ctx.fill();
+  // Ground
+  const grd=ctx.createLinearGradient(0,gY,0,H);
+  grd.addColorStop(0,'#8a7830');grd.addColorStop(0.4,'#6a5820');grd.addColorStop(1,'#4a3810');
+  ctx.fillStyle=grd;ctx.fillRect(0,gY,W,H-gY);
+
+  // Animals
+  huntData.animals.forEach(a=>{
+    a.bob+=0.15*a.bobDir;if(Math.abs(a.bob)>1.5)a.bobDir*=-1;
+    if(!a.hit)a.x+=a.spd; else a.opacity=Math.max(0,a.opacity-0.07);
+    ctx.save();ctx.globalAlpha=a.opacity;
+    drawAnimalShape(ctx,a);
+    ctx.restore();
+  });
+  huntData.animals=huntData.animals.filter(a=>a.x>-120&&a.opacity>0);
+  huntAF=requestAnimationFrame(()=>drawHunt(ctx,canvas));
+}
+
+function drawAnimalShape(ctx,a){
+  const yb=Math.sin(a.bob)*1.2;
+  ctx.fillStyle=a.col;
+  if(a.t==='buffalo'||a.t==='bear'){
+    ctx.beginPath();ctx.ellipse(a.x+a.w*0.45,a.y+a.h*0.5+yb,a.w*0.44,a.h*0.36,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(a.x+a.w*0.6,a.y+a.h*0.22+yb,a.w*0.22,a.h*0.26,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(a.x+a.w*0.87,a.y+a.h*0.38+yb,a.w*0.17,a.h*0.19,0.3,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=a.col;ctx.lineWidth=a.t==='buffalo'?6:5;
+    [0.2,0.35,0.54,0.68].forEach(lx=>{ctx.beginPath();ctx.moveTo(a.x+a.w*lx,a.y+a.h*0.78+yb);ctx.lineTo(a.x+a.w*lx,a.y+a.h+yb);ctx.stroke();});
+  } else if(a.t==='deer'){
+    ctx.beginPath();ctx.ellipse(a.x+a.w*0.44,a.y+a.h*0.54+yb,a.w*0.37,a.h*0.27,0,0,Math.PI*2);ctx.fill();
+    ctx.fillRect(a.x+a.w*0.69,a.y+a.h*0.2+yb,a.w*0.1,a.h*0.34);
+    ctx.beginPath();ctx.ellipse(a.x+a.w*0.82,a.y+a.h*0.14+yb,a.w*0.13,a.h*0.13,0,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=a.col;ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(a.x+a.w*0.78,a.y+a.h*0.06+yb);ctx.lineTo(a.x+a.w*0.7,a.y-5+yb);
+    ctx.moveTo(a.x+a.w*0.86,a.y+a.h*0.06+yb);ctx.lineTo(a.x+a.w*0.94,a.y-5+yb);ctx.stroke();
+    ctx.strokeStyle=a.col;ctx.lineWidth=3;
+    [0.22,0.34,0.52,0.64].forEach(lx=>{ctx.beginPath();ctx.moveTo(a.x+a.w*lx,a.y+a.h*0.76+yb);ctx.lineTo(a.x+a.w*(lx+0.02),a.y+a.h+yb);ctx.stroke();});
+  } else {
+    ctx.beginPath();ctx.ellipse(a.x+a.w*0.5,a.y+a.h*0.62+yb,a.w*0.34,a.h*0.26,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(a.x+a.w*0.76,a.y+a.h*0.4+yb,a.w*0.22,a.h*0.21,0,0,Math.PI*2);ctx.fill();
+    ctx.fillRect(a.x+a.w*0.68,a.y+yb,a.w*0.07,a.h*0.32);ctx.fillRect(a.x+a.w*0.8,a.y+yb,a.w*0.07,a.h*0.32);
+  }
+  if(a.hit){ctx.strokeStyle='#cc2020';ctx.lineWidth=3;ctx.beginPath();
+    ctx.moveTo(a.x+a.w*0.3,a.y+a.h*0.3+yb);ctx.lineTo(a.x+a.w*0.7,a.y+a.h*0.7+yb);
+    ctx.moveTo(a.x+a.w*0.7,a.y+a.h*0.3+yb);ctx.lineTo(a.x+a.w*0.3,a.y+a.h*0.7+yb);ctx.stroke();}
+}
+
+function doShot(e){
+  if(!huntData.running||huntData.ammo<=0)return;
+  huntData.ammo--;
+  document.getElementById('h-ammo').textContent=huntData.ammo;
+  const r=e.target.getBoundingClientRect();
+  const mx=e.clientX-r.left,my=e.clientY-r.top;
+  huntData.animals.forEach(a=>{
+    if(a.hit)return;
+    if(mx>=a.x&&mx<=a.x+a.w&&my>=a.y&&my<=a.y+a.h){
+      a.hit=true;
+      const food=Math.min(a.food,huntData.maxCarry-huntData.foodGained);
+      huntData.foodGained+=food;
+      document.getElementById('h-food').textContent=huntData.foodGained+' lbs';
+      if(huntData.foodGained>=huntData.maxCarry)endHunting();
+    }
+  });
+  if(huntData.ammo<=0)endHunting();
+}
+
+function endHunting(){
+  if(!huntData.running)return;
+  huntData.running=false;clearInterval(huntTimer);cancelAnimationFrame(huntAF);
+  G.supplies.ammo=Math.floor(huntData.ammo/50);
+  G.supplies.food+=huntData.foodGained;
+  document.getElementById('hunt-canvas').onclick=null;
+  document.getElementById('h-footer').innerHTML=
+    `Hunt complete! Bagged <strong>${huntData.foodGained} lbs</strong> of meat.
+     <button class="btn-gold" style="margin-left:16px;font-size:12px;padding:8px 18px;" onclick="endHuntScreen()">Return to Trail</button>`;
+}
+
+function endHuntScreen(){
+  hide('hunt-screen');
+  addLog(`Returned from hunt with ${huntData.foodGained} lbs of meat.`,'good');
+  advanceDate();G.totalDays++;consumeResources(false);
+  if(!checkGameOver())updateUI();
+}
+
+// ════════════════════════════════════════════════
+// GOLD PROSPECTING (Forty-Niners only)
+// ════════════════════════════════════════════════
+function goProspecting(){
+  if(G.occupation!=='fortyniner'){return;}
+  show('prospect-screen','flex');startProspecting();
+}
+
+function startProspecting(){
+  const canvas=document.getElementById('prospect-canvas');
+  const ctx=canvas.getContext('2d');
+  prospectData={goldFound:0,secondsLeft:25,running:true,nuggets:[]};
+  document.getElementById('p-gold').textContent='$0';
+  document.getElementById('p-time').textContent='25s';
+  document.getElementById('p-tbar').style.width='100%';
+  canvas.onclick=collectNugget;
+
+  prospectTimer=setInterval(()=>{
+    prospectData.secondsLeft--;
+    document.getElementById('p-time').textContent=prospectData.secondsLeft+'s';
+    document.getElementById('p-tbar').style.width=(prospectData.secondsLeft/25*100)+'%';
+    // Spawn nuggets randomly
+    if(Math.random()<0.45&&prospectData.nuggets.length<8){
+      prospectData.nuggets.push({
+        x:30+Math.random()*(canvas.width-60),
+        y:30+Math.random()*(canvas.height-60),
+        r:8+Math.random()*10,
+        value:2+Math.floor(Math.random()*12),
+        age:0,opacity:0
+      });
+    }
+    if(prospectData.secondsLeft<=0)endProspecting();
+  },1000);
+
+  drawProspect(ctx,canvas);
+}
+
+function drawProspect(ctx,canvas){
+  if(!prospectData.running)return;
+  const W=canvas.width,H=canvas.height;
+  // Pan background
+  ctx.fillStyle='#2a1a08';ctx.fillRect(0,0,W,H);
+  // Pan oval
+  const panGrad=ctx.createRadialGradient(W/2,H/2,10,W/2,H/2,Math.min(W,H)*0.45);
+  panGrad.addColorStop(0,'#4a3010');panGrad.addColorStop(0.7,'#3a2208');panGrad.addColorStop(1,'#1a0c04');
+  ctx.beginPath();ctx.ellipse(W/2,H/2,W*0.44,H*0.42,0,0,Math.PI*2);ctx.fillStyle=panGrad;ctx.fill();
+  ctx.strokeStyle='#6a4820';ctx.lineWidth=4;ctx.stroke();
+  // Water ripple
+  ctx.strokeStyle='rgba(100,160,200,0.15)';ctx.lineWidth=1.5;
+  [0.6,0.75,0.9].forEach(r=>{ctx.beginPath();ctx.ellipse(W/2,H/2,W*0.44*r,H*0.42*r,0,0,Math.PI*2);ctx.stroke();});
+  // Gravel
+  ctx.fillStyle='rgba(120,100,60,0.3)';
+  for(let i=0;i<30;i++){const gx=W/2+(Math.random()-0.5)*W*0.6,gy=H/2+(Math.random()-0.5)*H*0.5;ctx.beginPath();ctx.ellipse(gx,gy,3,2,Math.random()*Math.PI,0,Math.PI*2);ctx.fill();}
+  // Nuggets
+  prospectData.nuggets.forEach(n=>{
+    n.age++;n.opacity=Math.min(1,n.opacity+0.08);
+    const ng=ctx.createRadialGradient(n.x-n.r*0.3,n.y-n.r*0.3,n.r*0.1,n.x,n.y,n.r);
+    ng.addColorStop(0,'#e8cc40');ng.addColorStop(0.6,'#c09010');ng.addColorStop(1,'#806000');
+    ctx.globalAlpha=n.opacity;
+    ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,Math.PI*2);ctx.fillStyle=ng;ctx.fill();
+    ctx.strokeStyle='#e8d060';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.fillStyle='rgba(255,255,200,0.7)';ctx.beginPath();ctx.arc(n.x-n.r*0.3,n.y-n.r*0.3,n.r*0.2,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;
+  });
+  prospectAF=requestAnimationFrame(()=>drawProspect(ctx,canvas));
+}
+
+function collectNugget(e){
+  if(!prospectData.running)return;
+  const r=e.target.getBoundingClientRect();
+  const mx=e.clientX-r.left,my=e.clientY-r.top;
+  prospectData.nuggets=prospectData.nuggets.filter(n=>{
+    const dx=mx-n.x,dy=my-n.y;
+    if(Math.sqrt(dx*dx+dy*dy)<=n.r+4){
+      prospectData.goldFound+=n.value;
+      document.getElementById('p-gold').textContent='$'+prospectData.goldFound;
+      return false;
+    }
+    return true;
+  });
+}
+
+function endProspecting(){
+  if(!prospectData.running)return;
+  prospectData.running=false;clearInterval(prospectTimer);cancelAnimationFrame(prospectAF);
+  G.money+=prospectData.goldFound;
+  document.getElementById('prospect-canvas').onclick=null;
+  document.getElementById('p-footer').innerHTML=
+    `You panned <strong>$${prospectData.goldFound}</strong> in gold dust from the stream!
+     <button class="btn-gold" style="margin-left:12px;font-size:12px;padding:7px 16px;" onclick="endProspectScreen()">Return to Camp</button>`;
+}
+
+function endProspectScreen(){
+  hide('prospect-screen');
+  addLog(`Panned $${prospectData.goldFound} in gold dust from the stream.`,'gold');
+  advanceDate();consumeResources(false);
+  if(!checkGameOver())updateUI();
+}
+
+// ════════════════════════════════════════════════
+// RIVER CROSSING
+// ════════════════════════════════════════════════
+function showRiver(lm){
+  document.getElementById('river-title').textContent=`⛵ ${lm.name}`;
+  document.getElementById('river-meta').innerHTML=`
+    <div class="rm-stat"><strong>Depth:</strong> ${lm.river.depth}</div>
+    <div class="rm-stat"><strong>Current:</strong> ${lm.river.current}</div>
+    <div class="rm-stat"><strong>Ferry Fee:</strong> $${lm.river.ferryFee}</div>
+    <div class="rm-stat"><strong>Date:</strong> ${dateStr()}</div>
+  `;
+  document.getElementById('river-desc').textContent=lm.desc;
+  document.getElementById('river-result').style.display='none';
+
+  const d=parseFloat(lm.river.depth),c=lm.river.current;
+  const fRisk=d>4?'Very High Risk':d>3?'Moderate Risk':'Low Risk';
+  const cRisk=c==='Very Strong'?'High Risk':c==='Strong'?'Moderate Risk':'Low Risk';
+
+  document.getElementById('river-choices').innerHTML=`
+    <div class="rc-btn" onclick="ford(${d},'${c}')"><span>🚶 Ford the River</span><span class="rc-risk">${fRisk}</span></div>
+    <div class="rc-btn" onclick="caulkFloat('${c}')"><span>⛵ Caulk Wagon & Float</span><span class="rc-risk">${cRisk} · Free</span></div>
+    <div class="rc-btn" onclick="payFerry(${lm.river.ferryFee})"><span>🚢 Pay for Ferry</span><span class="rc-risk">Safe · $${lm.river.ferryFee}</span></div>
+    <div class="rc-btn" onclick="waitRiver()"><span>⏳ Wait for Water to Drop</span><span class="rc-risk">3-day delay · Uses supplies</span></div>
+  `;
+  show('river-screen','flex');
+  addLog(`Reached ${lm.name}.`,'landmark');
+}
+
+function showRiverResult(msg,then){
+  document.getElementById('river-choices').innerHTML='';
+  const r=document.getElementById('river-result');r.textContent=msg;r.style.display='block';
+  setTimeout(()=>{
+    const btn=document.createElement('button');
+    btn.style.cssText='margin-top:10px;padding:9px 18px;background:var(--sage);border:none;color:var(--paper);font-family:var(--fd);font-size:13px;cursor:pointer;display:block;';
+    btn.textContent='Continue West →';btn.onclick=()=>{hide('river-screen');then();};
+    r.appendChild(document.createElement('br'));r.appendChild(btn);
+  },700);
+}
+
+function afterRiver(){if(!checkGameOver())updateUI();}
+
+function ford(depth,current){
+  const risk=depth>4?0.6:depth>3?0.35:0.15;
+  if(Math.random()<risk){
+    const lf=Math.floor(G.supplies.food*(.2+Math.random()*.25));G.supplies.food-=lf;
+    const lw=Math.floor(G.supplies.water*0.3);G.supplies.water-=lw;
+    const alive=getLiving();
+    if(alive.length&&Math.random()<0.38){
+      const v=alive[Math.floor(Math.random()*alive.length)];v.health-=35;v.condition=getCondition(v.health);
+      showRiverResult(`Catastrophic ford! Lost ${lf} lbs of food, ${lw} gal of water, and ${v.name} is injured.`,afterRiver);
+      addLog('Dangerous ford — supplies lost, party member hurt.','critical');
+    } else {
+      showRiverResult(`The wagon nearly capsizes! You lose ${lf} lbs of food and ${lw} gal of water, but cross safely.`,afterRiver);
+      addLog('Rough ford crossing — supplies lost.','warn');
+    }
+  } else {
+    showRiverResult('A successful ford! Your wagon rolls up the far bank, wheels dripping.',afterRiver);
+    addLog('River forded successfully.','good');
+  }
+}
+
+function caulkFloat(current){
+  const risk=current==='Very Strong'?0.5:current==='Strong'?0.3:0.12;
+  if(Math.random()<risk){
+    const lf=Math.floor(G.supplies.food*0.3);G.supplies.food-=lf;
+    if(G.supplies.oxen>0&&Math.random()<0.35){G.supplies.oxen--;
+    showRiverResult(`The wagon rolls! An ox drowns in the torrent. You lose ${lf} lbs of food.`,afterRiver);
+    addLog('Wagon rolled — ox drowned, food lost.','critical');}
+    else{showRiverResult(`The wagon takes on water. ${lf} lbs of food is ruined, but you cross.`,afterRiver);
+    addLog('Rough float — food lost.','warn');}
+  } else {
+    showRiverResult('The caulked wagon floats smoothly across. Tense but successful!',afterRiver);
+    addLog('River crossed by caulking wagon.','good');
+  }
+}
+
+function payFerry(fee){
+  if(G.money<fee){document.getElementById('river-result').style.display='block';
+    document.getElementById('river-result').textContent=`You cannot afford the $${fee} ferry fee. Choose another option.`;
+    setTimeout(()=>document.getElementById('river-result').style.display='none',3000);return;}
+  G.money-=fee;
+  showRiverResult(`The ferryman poles your wagon safely across for $${fee}. Reliable and worth every cent.`,afterRiver);
+  addLog(`Paid $${fee} for ferry. Crossed safely.`,'good');
+}
+
+function waitRiver(){
+  G.delayDays+=3;G.supplies.food-=getFoodPerDay()*3;G.supplies.water-=getWaterPerDay()*3;
+  showRiverResult('Three days at the bank while the water drops. The crossing is much safer now.',afterRiver);
+  addLog('Waited 3 days for river to recede.','warn');
+}
+
+// ════════════════════════════════════════════════
+// 40-MILE DESERT
+// ════════════════════════════════════════════════
+function showDesert(){
+  addLog('You have reached the Humboldt Sink. The Forty-Mile Desert begins.','critical');
+  const w=G.supplies.water;
+  const needed=getWaterPerDay()*3;
+  document.getElementById('desert-warning').textContent=
+    `Ahead lie 40 miles of barren desert with no water source, no grass, and temperatures exceeding 110°F. Hundreds of abandoned wagons and the bones of oxen line this route. Your water supply will determine if you survive.\n\nCurrent water: ${Math.floor(w)} gallons. Minimum recommended: ${Math.ceil(needed*1.5)} gallons.`;
+
+  const pct=Math.min(100,w/(needed*2)*100);
+  document.getElementById('desert-water-status').innerHTML=
+    `<strong>Water Supply:</strong> ${Math.floor(w)} gal ${w<needed?'⚠️ CRITICALLY LOW':''}
+    <div class="dwstatus-bar"><div class="dwstatus-fill" style="width:${pct}%;background:${w<needed?'#cc2020':w<needed*1.5?'#c09020':'var(--sky)'}"></div></div>`;
+
+  document.getElementById('desert-choices').innerHTML=`
+    <div class="dc-btn" onclick="desert40Mile('night')">🌙 Travel by Night (cooler, safer, slower)</div>
+    <div class="dc-btn" onclick="desert40Mile('hard')">☀️ Push Hard Day & Night (fastest, most dangerous)</div>
+    <div class="dc-btn" onclick="desert40Mile('wait')">⏳ Wait at the Sink (rest 2 days, use more water)</div>
+  `;
+  document.getElementById('desert-result').style.display='none';
+  show('desert-screen','flex');
+}
+
+function desert40Mile(choice){
+  document.getElementById('desert-choices').innerHTML='';
+  const w=G.supplies.water;
+  const needed=getWaterPerDay()*3;
+  let waterCost, foodCost, delayD, oxRisk, partyRisk;
+
+  if(choice==='night'){waterCost=needed*1.2;foodCost=getFoodPerDay()*3;delayD=4;oxRisk=0.2;partyRisk=0.15;}
+  else if(choice==='hard'){waterCost=needed*2.2;foodCost=getFoodPerDay()*2.5;delayD=2;oxRisk=0.45;partyRisk=0.35;}
+  else{waterCost=needed*1.8;foodCost=getFoodPerDay()*5;delayD=5;oxRisk=0.15;partyRisk=0.1;} // wait first
+
+  G.supplies.water=Math.max(0,G.supplies.water-waterCost);
+  G.supplies.food=Math.max(0,G.supplies.food-foodCost);
+  advanceDate(delayD);G.totalDays+=delayD;
+
+  let results=[];
+  const waterShortage=w<needed;
+  if(waterShortage){
+    partyRisk+=0.3;oxRisk+=0.3;
+    results.push('Your water ran critically low mid-crossing. The heat was merciless.');
+  }
+
+  // Oxen casualties
+  let oxLost=0;
+  while(Math.random()<oxRisk&&G.supplies.oxen>0){G.supplies.oxen--;oxLost++;oxRisk-=0.15;}
+  if(oxLost)results.push(`${oxLost} ox${oxLost>1?'en':''} collapsed and died from heat and dehydration.`);
+
+  // Party health
+  const alive=getLiving();
+  alive.forEach(m=>{
+    if(Math.random()<partyRisk){
+      const dmg=Math.floor(20+Math.random()*40);m.health=Math.max(0,m.health-dmg);
+      m.condition=getCondition(m.health);
+      if(m.health<=0)results.push(`${m.name} has perished in the desert heat.`);
+      else results.push(`${m.name} suffered severely — health dropped to ${Math.floor(m.health)}%.`);
+    }
+  });
+
+  if(!results.length)results.push('Against the odds, your party crosses with losses minimal.');
+
+  const survived=getLiving().length>0;
+  const resultText=results.join('\n')+(survived?'\n\nYou emerge from the desert. The Carson River lies ahead.':'\n\nThe desert claims its victims.');
+
+  const r=document.getElementById('desert-result');
+  r.textContent=resultText;r.style.display='block';
+
+  if(survived){
+    setTimeout(()=>{
+      const btn=document.createElement('button');
+      btn.className='dc-btn';btn.textContent='Stagger toward the Carson River →';
+      btn.onclick=()=>{
+        hide('desert-screen');G.desertCrossed=true;
+        addLog('Your party survives the Forty-Mile Desert!','landmark');
+        // Auto-refill water at Carson River (next milestone)
+        if(!checkGameOver())updateUI();
+      };
+      document.getElementById('desert-choices').appendChild(btn);
+    },800);
+  } else {
+    setTimeout(()=>{hide('desert-screen');checkGameOver();},2000);
+  }
+}
+
+// ════════════════════════════════════════════════
+// SIERRA NEVADA CROSSING
+// ════════════════════════════════════════════════
+function showSierra(){
+  addLog('You have reached the Sierra Nevada — the final barrier.','landmark');
+  const late=isLateForSierra();
+  const veryLate=G.month>=11&&G.day>=1;
+
+  document.getElementById('sierra-season-label').textContent=
+    veryLate?'NOVEMBER — PASSES MAY BE CLOSED':late?'LATE OCTOBER — SNOW IN THE PASSES':'CROSSING THE FINAL BARRIER';
+
+  let warnColor=late?'#8a1a0a':'var(--sage)';
+  let warnText=veryLate
+    ?'⚠️ DANGER: November has arrived. The mountain passes may be buried in snow. The Donner Party met their terrible fate attempting this crossing in November 1846. Many believe you cannot get through.'
+    :late?'⚠️ WARNING: Late October snow covers the higher passes. The crossing will be extremely difficult. Move fast.'
+    :'The mountains are challenging but passable. Your timing is good — the passes should still be open.';
+  document.getElementById('sierra-warn').innerHTML=`<span style="color:${warnColor};font-family:var(--fb)">${warnText}</span>`;
+  document.getElementById('sierra-desc').textContent=
+    'The granite peaks of the Sierra Nevada rise thousands of feet above the Nevada desert. Two routes lead through:\n\n• Donner/Truckee Pass (northern): Shorter but steeper and more exposed to storms.\n• Carson Pass (southern): Longer by 30 miles but slightly lower and more sheltered.';
+
+  document.getElementById('sierra-choices').innerHTML=`
+    <div class="sc-btn" onclick="sierraCross('donner')">❄️ Attempt Donner/Truckee Pass (shorter, riskier)</div>
+    <div class="sc-btn" onclick="sierraCross('carson')">🏔️ Take Carson Pass (longer, more shelter)</div>
+    ${veryLate?`<div class="sc-btn" onclick="sierraCross('winter')">🙏 Risk it regardless — there is no going back</div>`:''}
+  `;
+  document.getElementById('sierra-result').style.display='none';
+  show('sierra-screen','flex');
+}
+
+function sierraCross(route){
+  document.getElementById('sierra-choices').innerHTML='';
+  const late=isLateForSierra();
+  const veryLate=G.month>=11;
+  let success=true, results=[];
+
+  let baseRisk = route==='donner'?0.25:0.18;
+  if(late) baseRisk+=0.25;
+  if(veryLate) baseRisk+=0.4;
+
+  if(route==='winter'||veryLate){
+    if(Math.random()<0.7){
+      success=false;results.push('The passes are buried in ten feet of snow. Your wagons cannot push through.');
+      results.push('Trapped in the Sierra Nevada as the winter closes in around you.');
+      results.push('\nLike the Donner Party before you, your party does not survive the winter.');
+    }
+  }
+
+  if(success){
+    const miles=route==='donner'?0:30;
+    if(miles)G.distance=Math.max(G.distance,G.distance-miles);
+
+    const alive=getLiving();
+    let lost=false;
+    alive.forEach(m=>{
+      if(Math.random()<baseRisk){
+        const dmg=Math.floor(15+Math.random()*35);m.health=Math.max(0,m.health-dmg);m.condition=getCondition(m.health);
+        if(m.health<=0){results.push(`${m.name} perishes in the mountain crossing.`);lost=true;}
+        else results.push(`${m.name} suffers frostbite and exhaustion — health at ${Math.floor(m.health)}%.`);
+      }
+    });
+
+    // Oxen in mountains
+    if(Math.random()<baseRisk*0.6&&G.supplies.oxen>0){G.supplies.oxen--;results.push('An ox stumbles off an icy ledge and is lost.');}
+
+    advanceDate(route==='carson'?12:8);G.totalDays+=(route==='carson'?12:8);
+    if(!results.length)results.push(late?'You cross through howling wind and knee-deep snow. Somehow you make it.':'The mountain crossing is grueling but achievable. Your party pushes through.');
+    results.push('\n🌲 You descend into the Sacramento Valley. California at last.');
+  }
+
+  const r=document.getElementById('sierra-result');
+  r.textContent=results.join('\n');r.style.display='block';
+
+  setTimeout(()=>{
+    const btn=document.createElement('button');
+    btn.className='sc-btn';
+    btn.textContent=success?'Descend into California →':'Face your fate...';
+    btn.onclick=()=>{
+      hide('sierra-screen');
+      if(success){G.sierraCrossed=true;G.distance=TOTAL_DISTANCE;}
+      checkGameOver();updateUI();
+    };
+    document.getElementById('sierra-choices').appendChild(btn);
+  },800);
+}
+
+// ════════════════════════════════════════════════
+// FORT / TRADING POST
+// ════════════════════════════════════════════════
+function showFort(lm){
+  document.getElementById('fort-title').textContent=lm.icon+' '+lm.name;
+  document.getElementById('fort-dist').textContent=`${lm.miles} MILES FROM INDEPENDENCE`;
+  document.getElementById('fort-desc').textContent=lm.desc;
+  document.getElementById('trade-panel').style.display='none';
+
+  // Merchant discount bonus
+  const bonus = G.occupation==='merchant';
+  const fb=document.getElementById('fort-bonus');
+  if(bonus){fb.textContent='🛒 As a Merchant, you receive a 15% discount on all goods at this trading post.';fb.style.display='block';}
+  else{fb.style.display='none';}
+
+  fortTradeMultiplier=lm.tradeMultiplier*(bonus?0.85:1.0);
+  renderTradeGrid();
+  show('fort-screen','flex');
+  addLog(`Arrived at ${lm.name}!`,'landmark');
+}
+
+function renderTradeGrid(){
+  document.getElementById('trade-cash').textContent=(G.money||0).toFixed(2);
+  const tradable=['food','water','ammo','medicine','wheels','axles','tongues'];
+  document.getElementById('trade-grid').innerHTML=tradable.map(k=>{
+    const base=STORE_PRICES_MAP[k];
+    const price=(base*fortTradeMultiplier).toFixed(2);
+    const cur=k==='water'?Math.floor(G.supplies[k])+' gal':G.supplies[k];
+    return `<div class="trade-row">
+      <div><div class="tr-name">${STORE_ITEMS[k].name.split('(')[0].trim()}</div>
+      <div class="tr-price">$${price}/${STORE_ITEMS[k].unit} · Have: ${cur}</div></div>
+      <div class="tr-controls">
+        <button class="tr-btn" onclick="tradeItem('${k}',-1,${price})">−</button>
+        <span class="tr-val">${G.supplies[k]}</span>
+        <button class="tr-btn" onclick="tradeItem('${k}',1,${price})">+</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function tradeItem(k,delta,price){
+  const nv=G.supplies[k]+delta;
+  if(nv<0)return;
+  const cost=delta*price;
+  if(cost>0&&G.money<cost){return;}
+  G.supplies[k]=nv;
+  G.money=Math.max(0,(G.money||0)-cost);
+  renderTradeGrid();updateSupplyUI();
+}
+
+function updateSupplyUI(){
+  // Just update the supply list part of the sidebar
+  const s=G.supplies;
+  const fw=s.food<getFoodPerDay()*3;
+  const ww=s.water<getWaterPerDay()*3;
+  document.getElementById('supply-list').innerHTML=`
+    <div class="sup-row"><span class="sup-icon">🍖</span><span class="sup-name">Food</span><span class="sup-val${fw?' sup-warn':''}">${Math.floor(s.food)} lbs</span></div>
+    <div class="sup-row"><span class="sup-icon">💧</span><span class="sup-name">Water</span><span class="sup-val${ww?' sup-warn':''}">${Math.floor(s.water)} gal</span></div>
+    <div class="sup-row"><span class="sup-icon">🐂</span><span class="sup-name">Oxen</span><span class="sup-val${s.oxen<2?' sup-warn':''}">${s.oxen}</span></div>
+    <div class="sup-row"><span class="sup-icon">💰</span><span class="sup-name">Money</span><span class="sup-val">$${G.money.toFixed(2)}</span></div>
+    <div class="sup-row"><span class="sup-icon">🔫</span><span class="sup-name">Ammo</span><span class="sup-val">${s.ammo} boxes</span></div>
+    <div class="sup-row"><span class="sup-icon">💊</span><span class="sup-name">Medicine</span><span class="sup-val">${s.medicine} kits</span></div>
+    <div class="sup-row"><span class="sup-icon">🛞</span><span class="sup-name">Spare Parts</span><span class="sup-val">W:${s.wheels} A:${s.axles} T:${s.tongues}</span></div>
+  `;
+}
+
+function toggleFortTrade(){
+  const p=document.getElementById('trade-panel');
+  p.style.display=p.style.display==='none'?'block':'none';
+}
+
+function fortRest(){
+  G.delayDays+=3;
+  G.party.forEach(m=>{if(m.health>0)m.health=Math.min(100,m.health+25);m.condition=getCondition(m.health);});
+  addLog('Rested 3 days at the trading post. Party health restored.','good');
+}
+
+function closeFort(){
+  hide('fort-screen');
+  if(!checkGameOver())updateUI();
+}
+
+// ════════════════════════════════════════════════
+// GAME OVER
+// ════════════════════════════════════════════════
+function showGameOver(won,reason){
+  hide('travel-screen');
+  const screen=document.getElementById('gameover-screen');
+  screen.className=`${won?'go-win':'go-lose'}`;
+
+  if(won){
+    document.getElementById('go-icon').textContent='🏆';
+    document.getElementById('go-title').textContent='California! You Made It!';
+    const alive=getLiving().map(m=>m.name).join(', ');
+    const goldMsg=G.occupation==='fortyniner'?'\n\nThe goldfields await. Your journey to riches has only begun.':'';
+    document.getElementById('go-msg').textContent=
+      `After ${G.totalDays} days on the trail, your wagon rolls into the Sacramento Valley. The Pacific sunlight glitters on the American River. ${alive} — you have achieved the impossible.${goldMsg}`;
+  } else {
+    document.getElementById('go-icon').textContent='💀';
+    document.getElementById('go-title').textContent='Your Party Has Perished';
+    const lastCond=G.party.find(m=>m.condition&&m.condition!=='Good'&&m.condition!=='Dead'&&m.condition!=='Recovering');
+    document.getElementById('go-msg').textContent=
+      (lastCond?`You have died of ${lastCond.condition.toLowerCase()}.`:reason||'The trail has claimed your party.')+
+      `\n\nYou traveled ${G.distance} of ${TOTAL_DISTANCE} miles — ${Math.round(G.distance/TOTAL_DISTANCE*100)}% of the Golden Road.`;
+  }
+
+  const alive=getLiving().length;
+  document.getElementById('go-stats').innerHTML=`
+    <div class="go-stat"><div class="go-stat-label">Distance</div><div class="go-stat-val">${G.distance} mi</div></div>
+    <div class="go-stat"><div class="go-stat-label">Survivors</div><div class="go-stat-val">${alive}/5</div></div>
+    <div class="go-stat"><div class="go-stat-label">Days on Trail</div><div class="go-stat-val">${G.totalDays}</div></div>
+    <div class="go-stat"><div class="go-stat-label">Date</div><div class="go-stat-val">${dateStr()}</div></div>
+  `;
+  show('gameover-screen','flex');
+}
+
+function resetGame(){
+  G={};if(mapObj){mapObj.remove();mapObj=null;}
+  ['gameover-screen','travel-screen','fort-screen','river-screen','desert-screen','sierra-screen','event-modal'].forEach(hide);
+  show('title-screen','flex');
+}
+
+// ════════════════════════════════════════════════
+// INSTRUCTIONS
+// ════════════════════════════════════════════════
+function showInstructions(){
+  show('event-modal','flex');
+  document.getElementById('ev-title').textContent='How to Play';
+  document.getElementById('ev-icon').textContent='📜';
+  document.getElementById('ev-body').textContent=`GOAL: Travel 2,100 miles from Independence, Missouri to Sacramento, California before winter closes the Sierra Nevada passes (November 15).
+
+🗺 MAP: The ArcGIS terrain map shows your route. Use the layer control (top-right) to toggle State Borders and City Labels on or off.
+
+👤 OCCUPATION: Choose your starting wealth and special ability:
+• Forty-Niner: Pan for gold at rivers for extra cash
+• Merchant: 15% discount at all trading posts
+• Farmer: −20% food consumption + 120 lbs free
+• Rancher: Oxen are hardier + 1 free ox
+
+💧 WATER is NEW! Nevada is a desert — you must carry water barrels. The 40-Mile Desert is the most dangerous stretch of the trail.
+
+🛞 TRAVEL: Click "Continue" each day. Balance pace, rations, and resource management.
+
+🦌 HUNTING: Shoot animals for food. Click the animals on screen.
+
+⛏️ PROSPECTING (Forty-Niners): Pan for gold at rivers — click gold nuggets in the pan.
+
+⚠️ KEY EVENTS: Illness, wagon damage, weather, alkali springs, and gold fever all await.
+
+🏔 SIERRA NEVADA: The final crossing. Arrive before October 20 for safety. After November — the passes close forever.`;
+  document.getElementById('ev-choices').innerHTML=`<button class="choice-btn" onclick="document.getElementById('event-modal').style.display='none'">Begin the Journey →</button>`;
+  document.getElementById('ev-result').style.display='none';
+}
+
+// ════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════
+G={occupation:null};
+show('title-screen','flex');
+</script>
+</body>
+</html>
