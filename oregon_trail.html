@@ -1,0 +1,2132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Oregon Trail — 1848</title>
+<link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/dark/main.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Rye&family=Special+Elite&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --p:#f2e5c0;--pd:#e0ce9a;--pk:#c8b06c;
+  --ink:#1a0d08;--inkm:#3d2010;--inkl:#5c3820;
+  --rust:#8b2e1a;--rustl:#b04030;
+  --gold:#8a6810;--goldl:#c4962a;
+  --sage:#3d5430;--sagel:#5a7848;
+  --bd:#8a6030;
+  --fd:'Rye',serif;--fb:'Special Elite',monospace;--fs:'IM Fell English',serif;
+}
+body{background:#0a0602;font-family:var(--fb);color:var(--ink);overflow:hidden;height:100vh;display:flex;align-items:center;justify-content:center;}
+#game{width:100vw;height:100vh;position:relative;overflow:hidden;background:var(--p);}
+
+/* ── PARCHMENT TEXTURE OVERLAY ── */
+#game::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:999;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+  mix-blend-mode:multiply;}
+
+/* ── TITLE SCREEN ── */
+#title-screen{position:absolute;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 50% 40%,#2a1408 0%,#0a0602 80%);color:var(--p);}
+.title-border{border:3px solid var(--goldl);border-radius:2px;padding:50px 70px;text-align:center;position:relative;
+  box-shadow:0 0 0 8px rgba(196,150,42,0.15),0 0 40px rgba(196,150,42,0.1);}
+.title-border::before,.title-border::after{content:'✦';position:absolute;font-size:22px;color:var(--goldl);}
+.title-border::before{top:-13px;left:50%;transform:translateX(-50%);}
+.title-border::after{bottom:-13px;left:50%;transform:translateX(-50%);}
+.title-eyebrow{font-family:var(--fb);font-size:13px;letter-spacing:6px;text-transform:uppercase;color:var(--goldl);margin-bottom:18px;}
+.title-main{font-family:var(--fd);font-size:clamp(42px,6vw,72px);line-height:1;color:var(--p);text-shadow:0 0 30px rgba(196,150,42,0.4);}
+.title-sub{font-family:var(--fs);font-style:italic;font-size:22px;color:var(--pk);margin-top:12px;}
+.wagon-svg{width:200px;height:80px;margin:30px auto;}
+.title-flavor{font-family:var(--fs);font-style:italic;font-size:14px;color:rgba(242,229,192,0.6);max-width:420px;line-height:1.7;margin:20px auto 30px;}
+.btn-primary{background:var(--rust);border:2px solid var(--rustl);color:var(--p);font-family:var(--fd);font-size:17px;
+  padding:14px 40px;cursor:pointer;letter-spacing:2px;transition:all .2s;position:relative;overflow:hidden;}
+.btn-primary:hover{background:var(--rustl);transform:translateY(-2px);box-shadow:0 6px 20px rgba(139,46,26,0.5);}
+.btn-primary::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);
+  transform:translateX(-100%);transition:transform .4s;}
+.btn-primary:hover::before{transform:translateX(100%);}
+.btn-secondary{background:transparent;border:2px solid var(--goldl);color:var(--goldl);font-family:var(--fb);
+  font-size:13px;padding:10px 28px;cursor:pointer;letter-spacing:2px;transition:all .2s;margin-top:12px;}
+.btn-secondary:hover{background:rgba(196,150,42,0.1);}
+
+/* ── OCCUPATION SCREEN ── */
+#occ-screen{position:absolute;inset:0;z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 50% 40%,#2a1408 0%,#0a0602 80%);color:var(--p);}
+.occ-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:24px;max-width:780px;}
+.occ-card{background:rgba(242,229,192,0.06);border:2px solid var(--goldl);padding:28px 22px;cursor:pointer;
+  transition:all .25s;text-align:center;border-radius:2px;}
+.occ-card:hover{background:rgba(242,229,192,0.12);transform:translateY(-4px);box-shadow:0 10px 30px rgba(0,0,0,0.4);}
+.occ-card.selected{background:rgba(139,46,26,0.3);border-color:var(--rustl);}
+.occ-icon{font-size:42px;margin-bottom:12px;}
+.occ-name{font-family:var(--fd);font-size:20px;color:var(--p);margin-bottom:8px;}
+.occ-money{font-family:var(--fb);font-size:13px;color:var(--goldl);margin-bottom:10px;letter-spacing:1px;}
+.occ-desc{font-family:var(--fs);font-style:italic;font-size:13px;color:rgba(242,229,192,0.7);line-height:1.6;}
+.screen-title{font-family:var(--fd);font-size:clamp(26px,4vw,38px);color:var(--p);text-align:center;margin-bottom:8px;}
+.screen-sub{font-family:var(--fs);font-style:italic;font-size:15px;color:rgba(242,229,192,0.6);text-align:center;margin-bottom:20px;}
+.name-inputs{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:16px 0;max-width:780px;}
+.name-input-group{display:flex;flex-direction:column;gap:6px;}
+.name-input-group label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--goldl);}
+.name-input-group input{background:rgba(242,229,192,0.08);border:1px solid var(--goldl);color:var(--p);
+  font-family:var(--fb);padding:8px 10px;font-size:14px;width:100%;}
+.name-input-group input:focus{outline:none;border-color:var(--rustl);}
+
+/* ── STORE SCREEN ── */
+#store-screen{position:absolute;inset:0;z-index:200;display:none;flex-direction:column;
+  background:var(--p);}
+.store-header{background:var(--inkm);color:var(--p);padding:16px 30px;display:flex;align-items:center;justify-content:space-between;}
+.store-header-title{font-family:var(--fd);font-size:28px;}
+.store-budget{font-family:var(--fb);font-size:18px;color:var(--goldl);}
+.store-body{display:grid;grid-template-columns:1fr 320px;gap:0;flex:1;overflow:hidden;}
+.store-items{padding:24px 30px;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-content:start;}
+.store-item{background:var(--pd);border:2px solid var(--bd);padding:16px;display:flex;flex-direction:column;gap:8px;}
+.item-name{font-family:var(--fd);font-size:16px;color:var(--inkm);}
+.item-price{font-family:var(--fb);font-size:12px;color:var(--gold);letter-spacing:1px;}
+.item-desc{font-family:var(--fs);font-style:italic;font-size:12px;color:var(--inkl);line-height:1.5;}
+.item-controls{display:flex;align-items:center;gap:10px;margin-top:4px;}
+.qty-btn{width:28px;height:28px;background:var(--rust);border:none;color:var(--p);font-size:16px;cursor:pointer;
+  font-family:var(--fd);transition:background .15s;}
+.qty-btn:hover{background:var(--rustl);}
+.qty-display{font-family:var(--fd);font-size:18px;min-width:40px;text-align:center;color:var(--inkm);}
+.item-total{font-family:var(--fb);font-size:11px;color:var(--gold);margin-left:auto;}
+.store-sidebar{background:var(--pk);border-left:3px solid var(--bd);padding:24px;display:flex;flex-direction:column;gap:16px;}
+.store-summary-title{font-family:var(--fd);font-size:18px;color:var(--inkm);border-bottom:2px solid var(--bd);padding-bottom:10px;}
+.summary-row{display:flex;justify-content:space-between;font-family:var(--fb);font-size:13px;color:var(--inkl);}
+.summary-row.total{font-size:15px;color:var(--rust);font-weight:bold;border-top:1px solid var(--bd);padding-top:8px;margin-top:4px;}
+.store-advice{background:rgba(26,13,8,0.08);border-left:3px solid var(--rust);padding:12px;
+  font-family:var(--fs);font-style:italic;font-size:13px;color:var(--inkm);line-height:1.6;}
+.store-footer{padding:16px 30px;background:var(--pd);border-top:2px solid var(--bd);display:flex;justify-content:space-between;align-items:center;}
+
+/* ── TRAVEL SCREEN ── */
+#travel-screen{position:absolute;inset:0;z-index:10;display:none;flex-direction:column;}
+.travel-topbar{background:var(--inkm);color:var(--p);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:3px solid var(--gold);flex-shrink:0;}
+.topbar-title{font-family:var(--fd);font-size:20px;letter-spacing:1px;}
+.topbar-info{display:flex;gap:24px;font-family:var(--fb);font-size:13px;}
+.topbar-stat{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.topbar-stat .label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(242,229,192,0.5);}
+.topbar-stat .value{color:var(--goldl);}
+.travel-body{display:flex;flex:1;overflow:hidden;}
+.sidebar{width:290px;background:var(--p);border-right:3px solid var(--bd);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;}
+.sidebar-section{padding:14px 16px;border-bottom:2px solid var(--parchment-dark,#e0ce9a);}
+.sidebar-section:last-child{border-bottom:none;}
+.sec-title{font-family:var(--fd);font-size:13px;color:var(--rustl);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;
+  display:flex;align-items:center;gap:8px;}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--rustl);opacity:0.3;}
+.party-member{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.member-name{font-family:var(--fb);font-size:13px;color:var(--inkm);flex:1;}
+.member-name.dead{text-decoration:line-through;color:#999;font-style:italic;}
+.health-bar-wrap{flex:1;background:var(--pd);height:8px;border-radius:1px;overflow:hidden;}
+.health-bar{height:100%;transition:width .5s;border-radius:1px;}
+.health-good{background:#4a7a3a;}
+.health-fair{background:#8a7a2a;}
+.health-poor{background:#8a4a2a;}
+.health-critical{background:#8a1a1a;}
+.health-dead{background:#555;}
+.member-status{font-family:var(--fb);font-size:10px;width:60px;text-align:right;color:var(--inkl);}
+.supply-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-family:var(--fb);font-size:13px;}
+.supply-icon{font-size:16px;width:22px;}
+.supply-name{color:var(--inkl);flex:1;}
+.supply-val{color:var(--inkm);font-weight:bold;}
+.supply-warn{color:var(--rust);}
+.control-group{margin-bottom:12px;}
+.control-label{font-family:var(--fb);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:6px;}
+.control-options{display:flex;gap:4px;flex-wrap:wrap;}
+.ctrl-btn{flex:1;padding:6px 8px;border:2px solid var(--bd);background:var(--pd);font-family:var(--fb);font-size:11px;
+  cursor:pointer;color:var(--inkm);text-align:center;transition:all .15s;min-width:60px;}
+.ctrl-btn:hover{border-color:var(--rust);color:var(--rust);}
+.ctrl-btn.active{background:var(--inkm);border-color:var(--inkm);color:var(--p);}
+.actions{display:flex;flex-direction:column;gap:7px;padding:14px 16px;}
+.action-btn{padding:10px 14px;border:none;font-family:var(--fd);font-size:13px;cursor:pointer;
+  letter-spacing:1px;transition:all .2s;display:flex;align-items:center;gap:8px;}
+.action-continue{background:var(--sage);color:var(--p);}
+.action-continue:hover{background:var(--sagel);}
+.action-hunt{background:var(--rust);color:var(--p);}
+.action-hunt:hover{background:var(--rustl);}
+.action-rest{background:var(--inkl);color:var(--p);}
+.action-rest:hover{background:var(--inkm);}
+.action-supplies{background:var(--gold);color:var(--p);}
+.action-supplies:hover{background:var(--goldl);}
+.right-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+#map{flex:1;min-height:200px;position:relative;}
+.log-panel{height:200px;background:var(--inkm);color:var(--p);overflow-y:auto;padding:12px 16px;flex-shrink:0;
+  border-top:3px solid var(--gold);}
+.log-entry{font-family:var(--fb);font-size:13px;line-height:1.7;padding:2px 0;border-bottom:1px solid rgba(242,229,192,0.08);}
+.log-entry:last-child{border-bottom:none;}
+.log-date{color:var(--goldl);font-weight:bold;}
+.log-critical{color:#e06050;}
+.log-good{color:#70a060;}
+.log-landmark{color:var(--goldl);}
+.log-warn{color:#c09040;}
+
+/* ── EVENT MODAL ── */
+#event-modal{position:absolute;inset:0;z-index:500;display:none;align-items:center;justify-content:center;
+  background:rgba(10,6,2,0.75);}
+.event-box{background:var(--p);border:4px solid var(--bd);max-width:500px;width:90%;position:relative;
+  box-shadow:0 20px 60px rgba(0,0,0,0.6);}
+.event-header{background:var(--inkm);color:var(--p);padding:16px 20px;font-family:var(--fd);font-size:20px;
+  border-bottom:2px solid var(--gold);}
+.event-icon{font-size:40px;text-align:center;padding:20px 0 10px;}
+.event-body{padding:16px 24px;font-family:var(--fs);font-style:italic;font-size:15px;color:var(--inkm);line-height:1.8;}
+.event-choices{padding:16px 24px 20px;display:flex;flex-direction:column;gap:8px;}
+.choice-btn{padding:12px 16px;border:2px solid var(--bd);background:var(--pd);font-family:var(--fb);
+  font-size:13px;cursor:pointer;color:var(--inkm);text-align:left;transition:all .2s;}
+.choice-btn:hover{background:var(--inkm);color:var(--p);border-color:var(--inkm);}
+.event-result{padding:16px 24px 20px;font-family:var(--fb);font-size:14px;color:var(--inkm);line-height:1.8;
+  background:rgba(138,96,16,0.1);border:1px solid var(--bd);margin:0 20px 20px;border-radius:2px;}
+
+/* ── HUNTING SCREEN ── */
+#hunt-screen{position:absolute;inset:0;z-index:400;display:none;flex-direction:column;background:var(--p);}
+.hunt-header{background:var(--inkm);color:var(--p);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:3px solid var(--rust);}
+.hunt-title{font-family:var(--fd);font-size:22px;}
+.hunt-stats{display:flex;gap:30px;}
+.hunt-stat{font-family:var(--fb);font-size:14px;display:flex;flex-direction:column;align-items:center;}
+.hunt-stat span:first-child{font-size:10px;letter-spacing:2px;color:rgba(242,229,192,0.5);}
+.hunt-stat span:last-child{color:var(--goldl);font-size:17px;}
+.hunt-canvas-wrap{flex:1;display:flex;align-items:center;justify-content:center;background:#7ab0d4;position:relative;}
+#hunt-canvas{display:block;cursor:crosshair;}
+.crosshair-hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-family:var(--fb);font-size:13px;
+  color:rgba(255,255,255,0.8);background:rgba(0,0,0,0.3);padding:4px 14px;border-radius:2px;}
+.hunt-timer-bar{height:6px;background:var(--rust);transition:width .5s linear;transform-origin:left;}
+.hunt-footer{background:var(--pd);border-top:2px solid var(--bd);padding:16px 24px;
+  font-family:var(--fs);font-style:italic;font-size:14px;color:var(--inkl);text-align:center;}
+
+/* ── RIVER SCREEN ── */
+#river-screen{position:absolute;inset:0;z-index:400;display:none;align-items:center;justify-content:center;
+  background:rgba(10,6,2,0.8);}
+.river-box{background:var(--p);border:4px solid #4a7aaa;max-width:560px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.7);}
+.river-header{background:#2a4a6a;color:var(--p);padding:16px 24px;font-family:var(--fd);font-size:22px;
+  border-bottom:3px solid #5a9acc;}
+.river-visual{height:80px;background:linear-gradient(180deg,#4a8ab0 0%,#2a6090 50%,#1a4070 100%);
+  display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+.river-visual::after{content:'~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~';position:absolute;font-size:24px;color:rgba(255,255,255,0.25);
+  letter-spacing:8px;animation:riverFlow 3s linear infinite;}
+@keyframes riverFlow{from{transform:translateX(-60px);}to{transform:translateX(60px);}}
+.river-info{padding:16px 24px;display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.river-stat{font-family:var(--fb);font-size:13px;color:var(--inkl);}
+.river-stat strong{color:var(--inkm);}
+.river-desc{padding:0 24px 16px;font-family:var(--fs);font-style:italic;font-size:14px;color:var(--inkm);line-height:1.7;}
+.river-choices{padding:0 24px 24px;display:flex;flex-direction:column;gap:8px;}
+.river-choice{padding:14px 18px;border:2px solid var(--bd);background:var(--pd);cursor:pointer;
+  font-family:var(--fb);font-size:13px;color:var(--inkm);transition:all .2s;display:flex;justify-content:space-between;align-items:center;}
+.river-choice:hover{background:var(--inkm);color:var(--p);}
+.river-choice .risk{font-size:11px;opacity:0.7;}
+.river-result{padding:16px 24px 20px;background:rgba(26,13,8,0.06);margin:0 20px 20px;border:1px solid var(--bd);
+  font-family:var(--fb);font-size:14px;color:var(--inkm);line-height:1.7;}
+
+/* ── FORT/LANDMARK SCREEN ── */
+#fort-screen{position:absolute;inset:0;z-index:400;display:none;align-items:center;justify-content:center;
+  background:rgba(10,6,2,0.8);}
+.fort-box{background:var(--p);border:4px solid var(--bd);max-width:600px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.7);}
+.fort-header{background:var(--ink);color:var(--p);padding:16px 24px;border-bottom:3px solid var(--goldl);}
+.fort-title{font-family:var(--fd);font-size:22px;margin-bottom:4px;}
+.fort-miles{font-family:var(--fb);font-size:12px;color:var(--goldl);letter-spacing:2px;}
+.fort-content{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+.fort-desc-panel{padding:20px 24px;border-right:2px solid var(--bd);}
+.fort-desc{font-family:var(--fs);font-style:italic;font-size:14px;color:var(--inkm);line-height:1.8;margin-bottom:16px;}
+.fort-actions-panel{padding:20px 24px;}
+.fort-action{padding:12px 16px;border:2px solid var(--bd);background:var(--pd);cursor:pointer;
+  font-family:var(--fd);font-size:14px;color:var(--inkm);transition:all .2s;display:block;width:100%;text-align:left;margin-bottom:8px;}
+.fort-action:hover{background:var(--inkm);color:var(--p);}
+.trade-panel{padding:0 24px 20px;border-top:2px solid var(--bd);}
+.trade-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+.trade-item{background:var(--pd);border:1px solid var(--bd);padding:10px 12px;display:flex;justify-content:space-between;align-items:center;}
+.trade-name{font-family:var(--fb);font-size:13px;color:var(--inkm);}
+.trade-price{font-family:var(--fd);font-size:12px;color:var(--gold);}
+.trade-qty-btns{display:flex;align-items:center;gap:6px;}
+.trade-qty-btn{width:24px;height:24px;background:var(--rust);border:none;color:var(--p);cursor:pointer;font-size:14px;
+  display:flex;align-items:center;justify-content:center;}
+.trade-qty-val{font-family:var(--fd);font-size:14px;min-width:24px;text-align:center;}
+
+/* ── GAME OVER SCREEN ── */
+#gameover-screen{position:absolute;inset:0;z-index:300;display:none;flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 50% 40%,#200a04 0%,#0a0602 80%);}
+.gameover-border{border:3px solid;padding:50px 60px;text-align:center;max-width:560px;}
+.gameover-win .gameover-border{border-color:var(--goldl);box-shadow:0 0 40px rgba(196,150,42,0.2);}
+.gameover-lose .gameover-border{border-color:#8a2a2a;box-shadow:0 0 40px rgba(138,42,42,0.2);}
+.gameover-icon{font-size:64px;margin-bottom:20px;}
+.gameover-title{font-family:var(--fd);font-size:clamp(28px,4vw,44px);color:var(--p);margin-bottom:12px;}
+.gameover-msg{font-family:var(--fs);font-style:italic;font-size:16px;color:rgba(242,229,192,0.7);line-height:1.8;margin-bottom:24px;}
+.gameover-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px;}
+.gs-stat{background:rgba(242,229,192,0.07);padding:12px;border:1px solid rgba(196,150,42,0.2);}
+.gs-label{font-family:var(--fb);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(242,229,192,0.5);margin-bottom:4px;}
+.gs-value{font-family:var(--fd);font-size:18px;color:var(--goldl);}
+
+/* ── ARCGIS SCENE / MAP OVERRIDES ── */
+.esri-view{font-family:var(--fb);}
+.esri-attribution{background:rgba(26,13,8,0.75)!important;color:rgba(242,229,192,0.6)!important;font-size:10px!important;}
+
+/* ── MAP LAYER TOGGLE PANEL ── */
+#map-layer-panel{
+  position:absolute;top:10px;right:10px;z-index:50;
+  background:rgba(26,13,8,0.88);border:2px solid var(--bd);
+  padding:10px 14px;min-width:160px;backdrop-filter:blur(4px);
+  box-shadow:0 4px 16px rgba(0,0,0,0.5);
+}
+.map-ctrl-title{font-family:var(--fb);font-size:10px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--goldl);margin-bottom:8px;border-bottom:1px solid var(--bd);padding-bottom:5px;}
+.map-ctrl-item{display:flex;align-items:center;gap:8px;font-family:var(--fb);font-size:12px;
+  color:rgba(242,229,192,0.85);cursor:pointer;padding:4px 0;user-select:none;}
+.map-ctrl-item input[type=checkbox]{accent-color:var(--rust);width:14px;height:14px;cursor:pointer;}
+
+/* ── PROGRESS BAR ── */
+.progress-wrap{height:8px;background:var(--pd);border:1px solid var(--bd);margin-top:6px;}
+.progress-fill{height:100%;background:var(--sage);transition:width .5s;}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-8px);}75%{transform:translateX(8px);}}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+.animate-in{animation:fadeIn .4s ease forwards;}
+.shake{animation:shake .4s ease;}
+.pulse{animation:pulse 1.5s ease infinite;}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-track{background:var(--pd);}
+::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--rust);}
+
+/* ── WAGON WHEEL DECORATION ── */
+.wheel-deco{display:inline-block;font-size:18px;animation:spin 4s linear infinite;}
+@keyframes spin{from{transform:rotate(0);}to{transform:rotate(360deg);}}
+
+/* ── DIFFICULTY BADGE ── */
+.diff-badge{display:inline-block;padding:2px 8px;font-size:10px;letter-spacing:2px;font-family:var(--fb);}
+.diff-easy{background:#3d5430;color:#afd09a;}
+.diff-med{background:#5a4010;color:#e0b060;}
+.diff-hard{background:#5a2010;color:#e07060;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .sidebar{width:240px;}
+  .occ-grid{grid-template-columns:1fr;max-width:340px;}
+  .name-inputs{grid-template-columns:1fr 1fr;}
+  .fort-content{grid-template-columns:1fr;}
+  .fort-desc-panel{border-right:none;border-bottom:2px solid var(--bd);}
+  .gameover-stats{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div id="game">
+  <!-- TITLE SCREEN -->
+  <div id="title-screen">
+    <div class="title-border animate-in">
+      <div class="title-eyebrow">Westward Expansion · 1848</div>
+      <div class="title-main">The Oregon Trail</div>
+      <div class="title-sub">A Journey of Two Thousand Miles</div>
+      <svg class="wagon-svg" viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+        <g fill="#c4962a" stroke="#8a6010" stroke-width="1.5">
+          <rect x="20" y="30" width="130" height="28" rx="2"/>
+          <path d="M30 30 Q85 5 150 30" fill="none" stroke="#c4962a" stroke-width="3"/>
+          <circle cx="38" cy="60" r="16" fill="none" stroke="#c4962a" stroke-width="2.5"/>
+          <line x1="38" y1="44" x2="38" y2="76" stroke="#8a6010" stroke-width="1.5"/>
+          <line x1="22" y1="60" x2="54" y2="60" stroke="#8a6010" stroke-width="1.5"/>
+          <line x1="27" y1="49" x2="49" y2="71" stroke="#8a6010" stroke-width="1.5"/>
+          <line x1="49" y1="49" x2="27" y2="71" stroke="#8a6010" stroke-width="1.5"/>
+          <circle cx="142" cy="60" r="16" fill="none" stroke="#c4962a" stroke-width="2.5"/>
+          <line x1="142" y1="44" x2="142" y2="76" stroke="#8a6010" stroke-width="1.5"/>
+          <line x1="126" y1="60" x2="158" y2="60" stroke="#8a6010" stroke-width="1.5"/>
+          <line x1="131" y1="49" x2="153" y2="71" stroke="#8a6010" stroke-width="1.5"/>
+          <line x1="153" y1="49" x2="131" y2="71" stroke="#8a6010" stroke-width="1.5"/>
+          <rect x="5" y="40" width="20" height="6" rx="1"/>
+          <ellipse cx="5" cy="43" rx="4" ry="5" fill="#8a6010"/>
+        </g>
+      </svg>
+      <div class="title-flavor">
+        "We have miles yet to travel, hardships yet to endure, rivers yet to cross, mountains yet to climb. God willing, we shall see Oregon."
+      </div>
+      <button class="btn-primary" onclick="showOccupation()">Begin the Journey</button><br>
+      <button class="btn-secondary" onclick="showInstructions()">How to Play</button>
+    </div>
+  </div>
+
+  <!-- OCCUPATION SCREEN -->
+  <div id="occ-screen">
+    <div class="screen-title animate-in" style="color:var(--p);margin-top:30px;">Choose Your Occupation</div>
+    <div class="screen-sub">Your profession determines your starting wealth and abilities</div>
+    <div class="name-inputs" id="name-inputs" style="width:90%;max-width:780px;">
+      <div class="name-input-group"><label>Your Name</label><input id="n0" type="text" value="John" maxlength="12"/></div>
+      <div class="name-input-group"><label>Member 2</label><input id="n1" type="text" value="Mary" maxlength="12"/></div>
+      <div class="name-input-group"><label>Member 3</label><input id="n2" type="text" value="Thomas" maxlength="12"/></div>
+      <div class="name-input-group"><label>Member 4</label><input id="n3" type="text" value="Sarah" maxlength="12"/></div>
+      <div class="name-input-group"><label>Member 5</label><input id="n4" type="text" value="Ezra" maxlength="12"/></div>
+    </div>
+    <div class="occ-grid" id="occ-grid">
+      <div class="occ-card" onclick="selectOcc('banker',this)">
+        <div class="occ-icon">🏦</div>
+        <div class="occ-name">Banker</div>
+        <div class="occ-money">Starting: $1,600</div>
+        <span class="diff-badge diff-easy">EASY</span>
+        <div class="occ-desc" style="margin-top:10px;">You come from wealth. Supplies are plentiful, but your party has little frontier experience.</div>
+      </div>
+      <div class="occ-card" onclick="selectOcc('carpenter',this)">
+        <div class="occ-icon">🪚</div>
+        <div class="occ-name">Carpenter</div>
+        <div class="occ-money">Starting: $800</div>
+        <span class="diff-badge diff-med">MEDIUM</span>
+        <div class="occ-desc" style="margin-top:10px;">A skilled tradesman. You can repair wagon parts for free once per landmark, saving precious supplies.</div>
+      </div>
+      <div class="occ-card" onclick="selectOcc('farmer',this)">
+        <div class="occ-icon">🌾</div>
+        <div class="occ-name">Farmer</div>
+        <div class="occ-money">Starting: $400</div>
+        <span class="diff-badge diff-hard">HARD</span>
+        <div class="occ-desc" style="margin-top:10px;">A man of the land. Your party eats 20% less food due to foraging skills, but funds are scarce.</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:14px;margin-top:20px;">
+      <button class="btn-secondary" onclick="showTitle()">← Back</button>
+      <button class="btn-primary" id="occ-next" onclick="showStore()" disabled style="opacity:0.5;cursor:not-allowed;">
+        Proceed to Supply Store →
+      </button>
+    </div>
+  </div>
+
+  <!-- STORE SCREEN -->
+  <div id="store-screen">
+    <div class="store-header">
+      <div><div style="font-family:var(--fb);font-size:11px;letter-spacing:2px;color:rgba(242,229,192,0.5);margin-bottom:4px;">MATT'S GENERAL STORE · INDEPENDENCE, MISSOURI</div>
+      <div class="store-header-title">Outfit Your Wagon</div></div>
+      <div style="text-align:right;">
+        <div style="font-size:11px;letter-spacing:2px;font-family:var(--fb);color:rgba(242,229,192,0.5);margin-bottom:4px;">YOUR BUDGET</div>
+        <div class="store-budget" id="store-budget">$0.00</div>
+      </div>
+    </div>
+    <div class="store-body">
+      <div class="store-items" id="store-items"></div>
+      <div class="store-sidebar">
+        <div class="store-summary-title">Purchase Summary</div>
+        <div id="store-summary"></div>
+        <div class="store-advice" id="store-advice">
+          Recommendation: Buy at least 400 lbs of food, 4 oxen, and a spare wheel. Keep $50 for emergencies.
+        </div>
+      </div>
+    </div>
+    <div class="store-footer">
+      <button class="btn-secondary" onclick="showOccupation()">← Back</button>
+      <div style="font-family:var(--fb);font-size:13px;color:var(--inkl);">Remaining: <strong id="store-remaining">$0</strong></div>
+      <button class="btn-primary" id="store-depart" onclick="startJourney()">Depart! →</button>
+    </div>
+  </div>
+
+  <!-- TRAVEL SCREEN -->
+  <div id="travel-screen">
+    <div class="travel-topbar">
+      <div class="topbar-title">🐂 The Oregon Trail</div>
+      <div class="topbar-info">
+        <div class="topbar-stat"><span class="label">Date</span><span class="value" id="top-date">Mar 1, 1848</span></div>
+        <div class="topbar-stat"><span class="label">Distance</span><span class="value" id="top-dist">0 mi</span></div>
+        <div class="topbar-stat"><span class="label">To Oregon</span><span class="value" id="top-remain">2,000 mi</span></div>
+        <div class="topbar-stat"><span class="label">Weather</span><span class="value" id="top-weather">Clear ☀️</span></div>
+        <div class="topbar-stat"><span class="label">Morale</span><span class="value" id="top-morale">Good</span></div>
+      </div>
+    </div>
+    <div class="travel-body">
+      <div class="sidebar">
+        <div class="sidebar-section">
+          <div class="sec-title">Party Members</div>
+          <div id="party-list"></div>
+        </div>
+        <div class="sidebar-section">
+          <div class="sec-title">Supplies</div>
+          <div id="supply-list"></div>
+          <div class="progress-wrap" title="Trail progress">
+            <div class="progress-fill" id="trail-progress" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="sidebar-section">
+          <div class="control-label">Travel Pace</div>
+          <div class="control-options" id="pace-controls">
+            <button class="ctrl-btn active" onclick="setPace('steady',this)">Steady</button>
+            <button class="ctrl-btn" onclick="setPace('strenuous',this)">Strenuous</button>
+            <button class="ctrl-btn" onclick="setPace('exhausting',this)">Grueling</button>
+          </div>
+          <div class="control-label" style="margin-top:10px;">Daily Rations</div>
+          <div class="control-options" id="ration-controls">
+            <button class="ctrl-btn active" onclick="setRations('filling',this)">Filling</button>
+            <button class="ctrl-btn" onclick="setRations('meager',this)">Meager</button>
+            <button class="ctrl-btn" onclick="setRations('bare',this)">Bare Bones</button>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="action-btn action-continue" onclick="advanceDay()">▶ Continue on Trail</button>
+          <button class="action-btn action-hunt" onclick="goHunting()">🦌 Go Hunting</button>
+          <button class="action-btn action-rest" onclick="restDay()">💤 Rest at Camp</button>
+          <button class="action-btn action-supplies" onclick="checkStatus()">📋 Check Status</button>
+        </div>
+      </div>
+      <div class="right-panel">
+        <div id="map">
+          <div id="map-layer-panel">
+            <div class="map-ctrl-title">🗺 Map Layers</div>
+            <label class="map-ctrl-item">
+              <input type="checkbox" id="toggle-borders" onchange="toggleMapLayer('borders',this.checked)"> State Borders
+            </label>
+            <label class="map-ctrl-item">
+              <input type="checkbox" id="toggle-cities" onchange="toggleMapLayer('cities',this.checked)"> Major Cities
+            </label>
+          </div>
+        </div>
+        <div class="log-panel" id="log-panel"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EVENT MODAL -->
+  <div id="event-modal">
+    <div class="event-box animate-in">
+      <div class="event-header" id="event-title">Event</div>
+      <div class="event-icon" id="event-icon">⚠️</div>
+      <div class="event-body" id="event-desc"></div>
+      <div class="event-choices" id="event-choices"></div>
+      <div class="event-result" id="event-result" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- HUNTING SCREEN -->
+  <div id="hunt-screen">
+    <div class="hunt-header">
+      <div class="hunt-title">🦌 Hunting Grounds</div>
+      <div class="hunt-stats">
+        <div class="hunt-stat"><span>AMMO</span><span id="hunt-ammo">--</span></div>
+        <div class="hunt-stat"><span>FOOD SHOT</span><span id="hunt-food">0 lbs</span></div>
+        <div class="hunt-stat"><span>TIME</span><span id="hunt-time">40s</span></div>
+      </div>
+    </div>
+    <div class="hunt-timer-bar" id="hunt-timer-bar" style="width:100%;"></div>
+    <div class="hunt-canvas-wrap">
+      <canvas id="hunt-canvas" width="900" height="360"></canvas>
+      <div class="crosshair-hint">Click on animals to shoot! Watch your ammunition.</div>
+    </div>
+    <div class="hunt-footer" id="hunt-footer">
+      Hunt wisely — you can carry at most 200 lbs of meat back to the wagon.
+    </div>
+  </div>
+
+  <!-- RIVER SCREEN -->
+  <div id="river-screen">
+    <div class="river-box animate-in">
+      <div class="river-header" id="river-title">River Crossing</div>
+      <div class="river-visual"></div>
+      <div class="river-info" id="river-info"></div>
+      <div class="river-desc" id="river-desc"></div>
+      <div class="river-choices" id="river-choices"></div>
+      <div class="river-result" id="river-result" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- FORT/LANDMARK SCREEN -->
+  <div id="fort-screen">
+    <div class="fort-box animate-in">
+      <div class="fort-header">
+        <div class="fort-title" id="fort-title">Fort Kearny</div>
+        <div class="fort-miles" id="fort-miles">320 MILES FROM INDEPENDENCE</div>
+      </div>
+      <div class="fort-content">
+        <div class="fort-desc-panel">
+          <div class="fort-desc" id="fort-desc"></div>
+          <div id="fort-carpenter-note" style="display:none;background:rgba(90,120,72,0.15);border:1px solid var(--sage);padding:10px;font-family:var(--fb);font-size:12px;color:var(--sage);margin-top:10px;">
+            🪚 As a carpenter, you repair one wagon part for free here.
+          </div>
+        </div>
+        <div class="fort-actions-panel">
+          <div style="font-family:var(--fd);font-size:14px;color:var(--rust);margin-bottom:10px;border-bottom:1px solid var(--bd);padding-bottom:8px;">OPTIONS</div>
+          <button class="fort-action" onclick="fortRest()">💤 Rest Here (3 days)</button>
+          <button class="fort-action" id="fort-trade-btn" onclick="toggleTrade()">🛒 Trade Supplies</button>
+          <button class="fort-action" onclick="closeFort()">▶ Continue Journey</button>
+        </div>
+      </div>
+      <div class="trade-panel" id="trade-panel" style="display:none;">
+        <div style="font-family:var(--fd);font-size:14px;color:var(--inkm);margin-bottom:6px;">Trading Post — <span style="font-family:var(--fb);font-size:12px;color:var(--gold);">Cash: $<span id="trade-cash">0</span></span></div>
+        <div class="trade-grid" id="trade-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME OVER SCREEN -->
+  <div id="gameover-screen">
+    <div class="gameover-border animate-in" id="gameover-border">
+      <div class="gameover-icon" id="go-icon">💀</div>
+      <div class="gameover-title" id="go-title">You Have Perished</div>
+      <div class="gameover-msg" id="go-msg"></div>
+      <div class="gameover-stats" id="go-stats"></div>
+      <button class="btn-primary" onclick="resetGame()">Play Again</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://js.arcgis.com/4.29/"></script>
+<script>
+// ═══════════════════════════════════════════
+// CONSTANTS & GAME DATA
+// ═══════════════════════════════════════════
+
+const TOTAL_DISTANCE = 2000;
+
+// Oregon Trail GPS coordinates (Independence MO → Oregon City OR)
+const TRAIL_PATH = [
+  [39.0917,-94.4153],[39.1167,-95.6667],[39.2500,-96.8000],[40.1800,-97.4500],
+  [40.6461,-99.0028],[41.0500,-100.5000],[41.1800,-101.8000],[41.4000,-102.5000],
+  [41.7036,-103.3444],[42.0800,-103.9000],[42.2097,-104.5461],[42.3500,-105.5000],
+  [42.4200,-106.2000],[42.4939,-107.1328],[42.4978,-108.8286],[41.8000,-109.8000],
+  [41.3178,-110.3828],[42.2000,-111.5000],[42.6500,-111.8500],[43.0311,-112.4194],
+  [42.9000,-113.5000],[42.8000,-114.0000],[42.7500,-115.5000],[43.6022,-116.2033],
+  [44.0500,-117.0000],[44.8000,-118.0000],[45.0000,-119.0000],[45.4000,-120.0000],
+  [45.5946,-121.1787],[45.4000,-122.0000],[45.3573,-122.6068]
+];
+
+const LANDMARKS = [
+  {name:'Kansas River Crossing',miles:100,type:'river',icon:'🌊',
+   desc:'The wide Kansas River bars your way. Spring rains have raised the waters considerably.',
+   river:{depth:'3.5 feet',current:'Moderate',ferryFee:5}},
+  {name:'Fort Kearny',miles:320,type:'fort',icon:'🏰',
+   desc:'Fort Kearny stands as a welcome sight on the broad Platte River valley. A small military garrison and trading post offer rest and resupply.',
+   tradeMultiplier:1.1},
+  {name:'Chimney Rock',miles:550,type:'landmark',icon:'🪨',
+   desc:'A towering spire of rock rises 300 feet from the plains — a famous landmark that tells travelers they are making progress. Many emigrants carve their names at its base.'},
+  {name:'Fort Laramie',miles:640,type:'fort',icon:'🏰',
+   desc:'Fort Laramie is the largest and most important resupply point on the trail. The trading post is well stocked, though prices are steeper than back home.',
+   tradeMultiplier:1.25},
+  {name:'Independence Rock',miles:820,type:'landmark',icon:'⛰️',
+   desc:'Emigrants call this "The Great Register of the Desert." Thousands of names are carved into this massive granite dome. If you reach it by July 4th, you are on schedule for Oregon.'},
+  {name:'South Pass',miles:950,type:'landmark',icon:'🏔️',
+   desc:'The Continental Divide! At South Pass you cross from the waters flowing east to those flowing west. The highest point on the trail — nearly 7,500 feet. The air is thin and cold.'},
+  {name:'Green River Crossing',miles:980,type:'river',icon:'🌊',
+   desc:'The Green River is swift and cold, fed by snowmelt from the mountains above.',
+   river:{depth:'4.5 feet',current:'Strong',ferryFee:8}},
+  {name:'Fort Bridger',miles:1070,type:'fort',icon:'🏰',
+   desc:'Jim Bridger\'s famous trading post sits in a pleasant valley. The last major resupply before the long desert stretches ahead.',
+   tradeMultiplier:1.3},
+  {name:'Soda Springs',miles:1295,type:'landmark',icon:'💧',
+   desc:'Carbonated springs bubble up from the ground — the pioneers call them "Soda Springs." Some try to make beer from the waters. Good place to rest.'},
+  {name:'Fort Hall',miles:1400,type:'fort',icon:'🏰',
+   desc:'Fort Hall marks the parting of ways — the California Trail splits off here. Many of your companions may choose gold over Oregon. Stay the course.',
+   tradeMultiplier:1.35},
+  {name:'Snake River Crossing',miles:1650,type:'river',icon:'🌊',
+   desc:'The mighty Snake River is treacherous — wide, deep, and fast. Many have been lost here. Choose your crossing wisely.',
+   river:{depth:'5.5 feet',current:'Very Strong',ferryFee:15}},
+  {name:'Fort Boise',miles:1600,type:'fort',icon:'🏰',
+   desc:'A small Hudson\'s Bay Company fort near the confluence of the Boise and Snake rivers. Last chance to resupply before the mountains.',
+   tradeMultiplier:1.4},
+  {name:'Blue Mountains',miles:1800,type:'landmark',icon:'🏔️',
+   desc:'The Blue Mountains of Oregon! The most difficult terrain yet — steep, forested slopes that challenge your oxen and wagon. You\'re nearly there.'},
+  {name:'The Dalles',miles:1930,type:'landmark',icon:'🌊',
+   desc:'The Columbia River Gorge — the final great obstacle. You may take the treacherous river route or attempt the mountain road. Oregon City lies just beyond.'},
+];
+
+const OCCUPATIONS = {
+  banker:   {money:1600, foodMultiplier:1.0, repairFree:false, label:'Banker'},
+  carpenter:{money:800,  foodMultiplier:1.0, repairFree:true,  label:'Carpenter'},
+  farmer:   {money:400,  foodMultiplier:0.8, repairFree:false, label:'Farmer'},
+};
+
+const STORE_PRICES = {
+  food:    {price:0.20, unit:'lb',  name:'Food (lbs)',      desc:'Dried beef, flour, sugar, coffee, salt. Essential for survival.'},
+  oxen:    {price:40,   unit:'head',name:'Oxen',            desc:'Strong draft animals that pull your wagon. Need at least 2.'},
+  clothing:{price:10,   unit:'set', name:'Clothing Sets',   desc:'Warm clothes for mountain cold and river crossings.'},
+  ammo:    {price:2,    unit:'box', name:'Ammunition (50)', desc:'Boxes of bullets for hunting and self-defense.'},
+  wheels:  {price:10,   unit:'ea', name:'Spare Wheels',     desc:'Essential if a wheel breaks on rocky terrain.'},
+  axles:   {price:10,   unit:'ea', name:'Spare Axles',      desc:'A broken axle can strand you in the wilderness.'},
+  tongues: {price:10,   unit:'ea', name:'Spare Tongues',    desc:'The wagon tongue connects wagon to oxen — vital.'},
+  medicine:{price:15,   unit:'kit',name:'Medicine Kits',    desc:'Treat illness and injury. Could save a life.'},
+};
+
+const ILLNESSES = [
+  {name:'Dysentery',severity:0.6,icon:'🤢',desc:'Severe intestinal illness from contaminated water. A member of your party writhes in agony.'},
+  {name:'Typhoid Fever',severity:0.7,icon:'🌡️',desc:'High fever and chills ravage a traveler. Typhoid spreads quickly in close quarters.'},
+  {name:'Cholera',severity:0.85,icon:'💀',desc:'The dreaded cholera strikes. Violent illness that can kill within hours.'},
+  {name:'Measles',severity:0.5,icon:'🔴',desc:'Red spots and fever afflict a member of your party. Rest and medicine are needed.'},
+  {name:'Exhaustion',severity:0.35,icon:'😮‍💨',desc:'One of your party has collapsed from exhaustion. The pace has been too brutal.'},
+  {name:'Snakebite',severity:0.55,icon:'🐍',desc:'A rattlesnake strikes without warning! A party member is bitten.'},
+  {name:'Broken Leg',severity:0.45,icon:'🦴',desc:'A stumble on rocky ground — a bad break. The pain is excruciating.'},
+  {name:'Fever',severity:0.4,icon:'🌡️',desc:'An unknown fever has gripped one of your travelers. Rest and care are needed.'},
+];
+
+const GOOD_EVENTS = [
+  {icon:'🫐',title:'Wild Berries!',desc:'Your party discovers a patch of wild berries along the trail. Extra food for the pot!',
+   effect:s=>{s.supplies.food=Math.min(s.supplies.food+40,s.supplies.food+40);addLog('Found wild berries. +40 lbs food.','good');}},
+  {icon:'🤝',title:'Friendly Natives',desc:'A band of Shoshone traders approaches peacefully. They offer dried salmon and guidance in exchange for some of your goods.',
+   effect:s=>{s.supplies.food+=80;addLog('Traded with Shoshone. +80 lbs food.','good');}},
+  {icon:'🪵',title:'Abandoned Wagon',desc:'You discover an abandoned wagon by the trail. The owners left supplies behind — a stroke of luck!',
+   effect:s=>{s.supplies.food+=60;s.money+=15;addLog('Found abandoned wagon. +60 lbs food, +$15.','good');}},
+  {icon:'🐟',title:'Good Fishing!',desc:'The creek teems with fish. Your party spends the afternoon with lines in the water and eats well.',
+   effect:s=>{s.supplies.food+=50;addLog('Excellent fishing. +50 lbs food.','good');}},
+  {icon:'🌿',title:'Fresh Spring',desc:'A clear mountain spring refreshes your party. Everyone\'s spirits lift considerably.',
+   effect:s=>{s.party.forEach(m=>{if(m.health>0&&m.health<100)m.health=Math.min(m.health+15,100);});addLog('Fresh spring found. Party health improved.','good');}},
+  {icon:'💰',title:'Traveler\'s Generosity',desc:'You meet westbound traders returning from Oregon. They share knowledge and some supplies.',
+   effect:s=>{s.money+=25;addLog('Generous travelers gave you $25.','good');}},
+];
+
+const BAD_WEATHER = [
+  {icon:'⛈️',title:'Severe Thunderstorm',desc:'A violent storm rolls across the plains. Lightning flashes, thunder roars, and driving rain turns the trail to mud.',
+   effect:s=>{s.delayDays=2;addLog('Severe storm — delayed 2 days.','warn');}},
+  {icon:'🌨️',title:'Early Snowfall',desc:'An unseasonable snowstorm blankets the trail. Your oxen struggle and the party shivers.',
+   effect:s=>{s.delayDays=3;s.party.forEach(m=>{if(m.health>0)m.health-=10;});addLog('Snowstorm! Delayed 3 days, party chilled.','warn');}},
+  {icon:'🌫️',title:'Heavy Fog',desc:'A thick fog settles over the valley. You cannot see more than a few feet ahead and must stop.',
+   effect:s=>{s.delayDays=1;addLog('Heavy fog — delayed 1 day.','warn');}},
+  {icon:'💨',title:'Dust Storm',desc:'A wall of brown dust sweeps across the plains. You hunker down and wait it out.',
+   effect:s=>{s.delayDays=2;addLog('Dust storm — delayed 2 days.','warn');}},
+  {icon:'🌧️',title:'Heavy Rain',desc:'Days of heavy rain turn the trail into a quagmire. The wagon sinks to its axles.',
+   effect:s=>{s.delayDays=2;addLog('Heavy rains slow progress — delayed 2 days.','warn');}},
+];
+
+const WAGON_EVENTS = [
+  {icon:'🛞',title:'Wagon Wheel Breaks!',desc:'A sharp rock shatters your wagon wheel. You must replace it or you cannot continue.',
+   part:'wheels', partName:'spare wheel'},
+  {icon:'⚙️',title:'Axle Snapped!',desc:'The axle cracks under the strain of the trail. A critical failure that must be repaired.',
+   part:'axles', partName:'spare axle'},
+  {icon:'🪵',title:'Wagon Tongue Broken!',desc:'The wagon tongue snaps. Without it, the oxen cannot pull the wagon.',
+   part:'tongues', partName:'spare tongue'},
+];
+
+const THEFT_EVENTS = [
+  {icon:'🦹',title:'Thieves in Camp!',desc:'You awake to find strangers have raided your camp during the night. Supplies are missing!',
+   effect:s=>{const lost=Math.floor(s.supplies.food*0.2);s.supplies.food-=lost;addLog(`Thieves stole ${lost} lbs of food!`,'critical');}},
+  {icon:'💸',title:'Money Stolen',desc:'A pickpocket in the last settlement made off with some of your cash.',
+   effect:s=>{const lost=Math.min(s.money,Math.floor(s.money*0.25)+5);s.money-=lost;addLog(`Pickpocket stole $${lost}!`,'critical');}},
+];
+
+// ═══════════════════════════════════════════
+// GAME STATE
+// ═══════════════════════════════════════════
+
+let G = {}; // game state
+let mapObj = null;      // ArcGIS SceneView
+let wagonMarker = null; // ref to wagon Graphic
+let arcgisReady = null; // cached module map
+let _trailLayer, _landmarkLayer, _wagonLayer, _stateBordersLayer, _citiesLayer;
+let huntAnimFrame = null;
+let huntTimerInterval = null;
+let huntData = {};
+
+function initState() {
+  const names = ['n0','n1','n2','n3','n4'].map(id=>document.getElementById(id).value.trim()||['Pioneer','Partner','Child1','Child2','Elder'][+id.slice(1)]);
+  const occ = G.occupation || 'farmer';
+  const occData = OCCUPATIONS[occ];
+  G = {
+    screen: 'travel',
+    day: 1,
+    month: 3, year: 1848,
+    money: occData.money,
+    distance: 0,
+    occupation: occ,
+    supplies: {
+      food: G.tempSupplies?.food || 0,
+      oxen: G.tempSupplies?.oxen || 0,
+      clothing: G.tempSupplies?.clothing || 0,
+      ammo: G.tempSupplies?.ammo || 0,
+      wheels: G.tempSupplies?.wheels || 0,
+      axles: G.tempSupplies?.axles || 0,
+      tongues: G.tempSupplies?.tongues || 0,
+      medicine: G.tempSupplies?.medicine || 0,
+    },
+    party: names.map(n=>({name:n,health:100,condition:'Good',sick:false,injury:null,sickDays:0})),
+    pace: 'steady',
+    rations: 'filling',
+    weather: 'clear',
+    delayDays: 0,
+    wagonHealth: 100,
+    nextLandmarkIdx: 0,
+    visitedLandmarks: [],
+    log: [],
+    morale: 100,
+    day_killed: [],
+    carpenterRepairUsed: false,
+    totalDays: 0,
+    survivors: 0,
+  };
+}
+
+// ═══════════════════════════════════════════
+// MAP SETUP — ArcGIS Maps SDK 4.x · 3D SceneView
+// Basemap: World Terrain Base (no labels / borders)
+// Elevation: World Elevation (3D terrain extrusion)
+// Optional layers: US State Borders, Major Cities
+// ═══════════════════════════════════════════
+
+function setupMap() {
+  if (mapObj) { mapObj.destroy(); mapObj = null; }
+
+  require([
+    "esri/Map",
+    "esri/views/SceneView",
+    "esri/layers/GraphicsLayer",
+    "esri/layers/FeatureLayer",
+    "esri/layers/TileLayer",
+    "esri/Graphic",
+    "esri/geometry/Point",
+    "esri/geometry/Polyline",
+    "esri/Basemap"
+  ], function(Map, SceneView, GraphicsLayer, FeatureLayer, TileLayer, Graphic, Point, Polyline, Basemap) {
+
+    arcgisReady = { Map, SceneView, GraphicsLayer, FeatureLayer, TileLayer, Graphic, Point, Polyline, Basemap };
+
+    // ── Terrain-only basemap (no political borders, no city labels) ──
+    const terrainBasemap = new Basemap({
+      baseLayers: [
+        new TileLayer({
+          url: "https://services.arcgisonline.com/arcgis/rest/services/World_Terrain_Base/MapServer",
+          title: "World Terrain Base"
+        })
+      ],
+      title: "Terrain"
+    });
+
+    // ── Trail polyline layer ──
+    _trailLayer = new GraphicsLayer({ title: "Oregon Trail Route", elevationInfo: { mode: "on-the-ground" } });
+
+    // ── Landmark icons & labels ──
+    _landmarkLayer = new GraphicsLayer({ title: "Landmarks", elevationInfo: { mode: "on-the-ground" } });
+
+    // ── Wagon position ──
+    _wagonLayer = new GraphicsLayer({ title: "Wagon", elevationInfo: { mode: "on-the-ground" } });
+
+    // ── US State Borders (FeatureLayer from public ArcGIS service) ── initially hidden ──
+    _stateBordersLayer = new FeatureLayer({
+      url: "https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/USA_States_Generalized_Boundaries/FeatureServer/0",
+      visible: false,
+      title: "State Borders",
+      renderer: {
+        type: "simple",
+        symbol: { type: "simple-line", color: [200, 160, 70, 0.75], width: 1.2, style: "solid" }
+      },
+      outFields: [],
+      popupEnabled: false,
+      elevationInfo: { mode: "on-the-ground" }
+    });
+
+    // ── Major Cities (hardcoded western trail towns) ── initially hidden ──
+    _citiesLayer = new GraphicsLayer({ title: "Major Cities", visible: false, elevationInfo: { mode: "on-the-ground" } });
+    const TRAIL_TOWNS = [
+      { name:"Independence, MO",  lng:-94.4153, lat:39.0917 },
+      { name:"Topeka, KS",        lng:-95.6867, lat:39.0483 },
+      { name:"Fort Kearny, NE",   lng:-98.9347, lat:40.6411 },
+      { name:"Scottsbluff, NE",   lng:-103.664, lat:41.8669 },
+      { name:"Fort Laramie, WY",  lng:-104.546, lat:42.2097 },
+      { name:"Casper, WY",        lng:-106.325, lat:42.8666 },
+      { name:"South Pass, WY",    lng:-108.829, lat:42.4978 },
+      { name:"Fort Bridger, WY",  lng:-110.383, lat:41.3178 },
+      { name:"Pocatello, ID",     lng:-112.446, lat:42.8713 },
+      { name:"Twin Falls, ID",    lng:-114.462, lat:42.5629 },
+      { name:"Boise, ID",         lng:-116.202, lat:43.6150 },
+      { name:"Pendleton, OR",     lng:-118.788, lat:45.6721 },
+      { name:"The Dalles, OR",    lng:-121.179, lat:45.5946 },
+      { name:"Oregon City, OR",   lng:-122.607, lat:45.3573 }
+    ];
+    TRAIL_TOWNS.forEach(t => {
+      _citiesLayer.add(new Graphic({
+        geometry: new Point({ longitude: t.lng, latitude: t.lat }),
+        symbol: { type: "simple-marker", color: [196,150,42,1], outline:{ color:[242,229,192,0.7], width:1 }, size:7 }
+      }));
+      _citiesLayer.add(new Graphic({
+        geometry: new Point({ longitude: t.lng, latitude: t.lat }),
+        symbol: {
+          type: "text", text: t.name,
+          color: [242,229,192,1], haloColor: [10,6,2,0.9], haloSize: 1.5,
+          yoffset: 12, font: { size: 10, weight: "bold" }
+        }
+      }));
+    });
+
+    const map = new Map({
+      basemap: terrainBasemap,
+      ground: "world-elevation",
+      layers: [_stateBordersLayer, _trailLayer, _landmarkLayer, _citiesLayer, _wagonLayer]
+    });
+
+    mapObj = new SceneView({
+      container: "map",
+      map: map,
+      camera: {
+        position: { longitude: -104, latitude: 39, z: 3800000 },
+        tilt: 52,
+        heading: 288
+      },
+      environment: {
+        atmosphere: { quality: "high" },
+        lighting: { date: new Date("1848-04-15T14:00:00") }
+      },
+      ui: { components: ["zoom", "compass", "navigation-toggle"] }
+    });
+
+    mapObj.when(() => {
+      // Draw trail path as dashed polyline on terrain
+      const coords = TRAIL_PATH.map(([lat, lng]) => [lng, lat]);
+      _trailLayer.add(new Graphic({
+        geometry: new Polyline({ paths: [coords] }),
+        symbol: { type: "simple-line", color: [139,46,26,0.92], width: 2.5, style: "dash" }
+      }));
+
+      // Draw landmark icons and name labels
+      LANDMARKS.forEach(lm => {
+        const [lat, lng] = getTrailPosition(lm.miles);
+        _landmarkLayer.add(new Graphic({
+          geometry: new Point({ longitude: lng, latitude: lat }),
+          symbol: { type: "text", text: lm.icon, font: { size: 15 } }
+        }));
+        _landmarkLayer.add(new Graphic({
+          geometry: new Point({ longitude: lng, latitude: lat }),
+          symbol: {
+            type: "text", text: lm.name,
+            color: [242,229,192,1], haloColor: [10,6,2,0.85], haloSize: 1.5,
+            yoffset: -18, font: { size: 9 }
+          }
+        }));
+      });
+
+      // Initial wagon marker at Independence, MO
+      const [lat0, lng0] = TRAIL_PATH[0];
+      const wg = new Graphic({
+        geometry: new Point({ longitude: lng0, latitude: lat0 }),
+        symbol: { type: "text", text: "🐂", font: { size: 22 } }
+      });
+      _wagonLayer.add(wg);
+      wagonMarker = wg;
+
+      // Fly to trail overview
+      mapObj.goTo({
+        center: [-104, 42],
+        zoom: 5,
+        tilt: 52
+      }, { animate: true, duration: 1800 });
+    });
+  });
+}
+
+// Returns [lat, lng] interpolated along TRAIL_PATH for a given mileage
+function getTrailPosition(miles) {
+  const pct = Math.max(0, Math.min(1, miles / TOTAL_DISTANCE));
+  const idx = pct * (TRAIL_PATH.length - 1);
+  const lo = Math.floor(idx), hi = Math.min(lo + 1, TRAIL_PATH.length - 1);
+  const t = idx - lo;
+  return [
+    TRAIL_PATH[lo][0] + t * (TRAIL_PATH[hi][0] - TRAIL_PATH[lo][0]),
+    TRAIL_PATH[lo][1] + t * (TRAIL_PATH[hi][1] - TRAIL_PATH[lo][1])
+  ];
+}
+
+function updateWagonOnMap() {
+  if (!mapObj || !wagonMarker || !arcgisReady) return;
+  const { Point } = arcgisReady;
+  const [lat, lng] = getTrailPosition(G.distance);
+  // Update wagon graphic geometry
+  wagonMarker.geometry = new Point({ longitude: lng, latitude: lat });
+  // Pan camera to follow wagon
+  mapObj.goTo({
+    target: new Point({ longitude: lng, latitude: lat }),
+    zoom: 7,
+    tilt: 55
+  }, { animate: true, duration: 1000, easing: "in-out-expo" });
+}
+
+function toggleMapLayer(layer, visible) {
+  if (layer === 'borders' && _stateBordersLayer) _stateBordersLayer.visible = visible;
+  if (layer === 'cities'  && _citiesLayer)       _citiesLayer.visible  = visible;
+}
+
+// ═══════════════════════════════════════════
+// SCREEN NAVIGATION
+// ═══════════════════════════════════════════
+
+function showTitle() {
+  hide('occ-screen'); hide('store-screen'); hide('travel-screen');
+  show('title-screen','flex');
+}
+function showOccupation() {
+  hide('title-screen'); hide('store-screen');
+  show('occ-screen','flex');
+}
+function showStore() {
+  if (!G.occupation) return;
+  hide('occ-screen');
+  show('store-screen','flex');
+  G.tempSupplies = {food:0,oxen:0,clothing:0,ammo:0,wheels:0,axles:0,tongues:0,medicine:0};
+  G.money = OCCUPATIONS[G.occupation].money;
+  renderStore();
+}
+function startJourney() {
+  hide('store-screen');
+  initState();
+  show('travel-screen','flex');
+  setTimeout(() => {
+    setupMap();
+    updateUI();
+    addLog(`March 1, 1848 — Your wagon departs Independence, Missouri. Oregon lies ${TOTAL_DISTANCE} miles to the west. God speed.`,'landmark');
+  }, 100);
+}
+
+function show(id, display='block') { document.getElementById(id).style.display = display; }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+
+// ═══════════════════════════════════════════
+// STORE LOGIC
+// ═══════════════════════════════════════════
+
+function renderStore() {
+  const budget = OCCUPATIONS[G.occupation].money;
+  document.getElementById('store-budget').textContent = `$${budget.toFixed(2)}`;
+  G.tempSupplies = {food:0,oxen:0,clothing:0,ammo:0,wheels:0,axles:0,tongues:0,medicine:0};
+
+  const items = document.getElementById('store-items');
+  items.innerHTML = Object.entries(STORE_PRICES).map(([key,item])=>`
+    <div class="store-item">
+      <div class="item-name">${item.name}</div>
+      <div class="item-price">$${item.price.toFixed(2)} per ${item.unit}</div>
+      <div class="item-desc">${item.desc}</div>
+      <div class="item-controls">
+        <button class="qty-btn" onclick="changeQty('${key}',-10)">−−</button>
+        <button class="qty-btn" onclick="changeQty('${key}',-1)">−</button>
+        <div class="qty-display" id="qty-${key}">0</div>
+        <button class="qty-btn" onclick="changeQty('${key}',1)">+</button>
+        <button class="qty-btn" onclick="changeQty('${key}',10)">++</button>
+        <div class="item-total" id="tot-${key}">$0</div>
+      </div>
+    </div>`).join('');
+  updateStoreSummary();
+}
+
+function changeQty(key, delta) {
+  const price = STORE_PRICES[key].price;
+  const spent = getSpent();
+  const budget = OCCUPATIONS[G.occupation].money;
+  let current = G.tempSupplies[key];
+  let newVal = Math.max(0, current + delta);
+  // For oxen, cap at 9; for others cap at 9999
+  if (key === 'oxen') newVal = Math.min(newVal, 9);
+  // Check budget
+  const newSpent = spent - current * price + newVal * price;
+  if (newSpent > budget) {
+    newVal = Math.floor((budget - spent + current * price) / price);
+    newVal = Math.max(0, newVal);
+  }
+  G.tempSupplies[key] = newVal;
+  document.getElementById('qty-'+key).textContent = newVal;
+  document.getElementById('tot-'+key).textContent = `$${(newVal*price).toFixed(2)}`;
+  updateStoreSummary();
+}
+
+function getSpent() {
+  return Object.entries(G.tempSupplies).reduce((sum,[k,v])=>sum+v*STORE_PRICES[k].price,0);
+}
+
+function updateStoreSummary() {
+  const budget = OCCUPATIONS[G.occupation].money;
+  const spent = getSpent();
+  const remaining = budget - spent;
+  const summary = document.getElementById('store-summary');
+  summary.innerHTML = Object.entries(G.tempSupplies).filter(([k,v])=>v>0).map(([k,v])=>`
+    <div class="summary-row"><span>${STORE_PRICES[k].name.split('(')[0].trim()}: ${v}</span><span>$${(v*STORE_PRICES[k].price).toFixed(2)}</span></div>
+  `).join('') + `<div class="summary-row total"><span>Total Spent</span><span>$${spent.toFixed(2)}</span></div>`;
+  document.getElementById('store-remaining').textContent = `$${remaining.toFixed(2)}`;
+  document.getElementById('store-remaining').style.color = remaining < 0 ? 'var(--rust)' : 'var(--inkm)';
+
+  // Advice
+  let advice = '';
+  if (G.tempSupplies.oxen < 2) advice = '⚠️ You need at least 2 oxen to move the wagon!';
+  else if (G.tempSupplies.food < 200) advice = '⚠️ Buy more food — 400+ lbs recommended for a party of five.';
+  else if (G.tempSupplies.ammo < 3) advice = '💡 More ammunition means more hunting — food is never guaranteed.';
+  else if (G.tempSupplies.wheels === 0) advice = '💡 A spare wagon wheel could save your journey on rocky terrain.';
+  else if (G.tempSupplies.medicine === 0) advice = '💡 Medicine kits can treat dysentery and typhoid — worth the cost.';
+  else advice = '✓ Well-supplied. Consider keeping some cash for ferry crossings.';
+  document.getElementById('store-advice').textContent = advice;
+
+  const canDepart = G.tempSupplies.oxen >= 2;
+  const btn = document.getElementById('store-depart');
+  btn.disabled = !canDepart;
+  btn.style.opacity = canDepart ? '1' : '0.5';
+  btn.style.cursor = canDepart ? 'pointer' : 'not-allowed';
+}
+
+// ═══════════════════════════════════════════
+// OCCUPATION SELECTION
+// ═══════════════════════════════════════════
+
+function selectOcc(occ, el) {
+  document.querySelectorAll('.occ-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  G.occupation = occ;
+  const btn = document.getElementById('occ-next');
+  btn.disabled = false;
+  btn.style.opacity = '1';
+  btn.style.cursor = 'pointer';
+}
+
+// ═══════════════════════════════════════════
+// DATE HELPERS
+// ═══════════════════════════════════════════
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_DAYS = [31,28,31,30,31,30,31,31,30,31,30,31];
+
+function advanceDate(days=1) {
+  for (let i = 0; i < days; i++) {
+    G.day++;
+    G.totalDays++;
+    if (G.day > MONTH_DAYS[G.month-1]) {
+      G.day = 1;
+      G.month++;
+      if (G.month > 12) { G.month = 1; G.year++; }
+    }
+  }
+}
+
+function dateStr() {
+  return `${MONTHS[G.month-1]} ${G.day}, ${G.year}`;
+}
+
+function isWinterDeadline() {
+  // Nov 1 deadline
+  return G.month >= 11 || (G.month === 10 && G.day > 25);
+}
+
+function dateProgress() {
+  // Returns 0-1 of year progress (March = 0, October = 1 target)
+  const startDay = 60; // march 1 (approx)
+  const endDay = 304;  // oct 31
+  const curDay = (G.month-1)*30 + G.day;
+  return Math.max(0, Math.min(1, (curDay - startDay) / (endDay - startDay)));
+}
+
+// ═══════════════════════════════════════════
+// GAME LOGIC
+// ═══════════════════════════════════════════
+
+function getPaceMiles() {
+  const base = {steady:15, strenuous:20, exhausting:26}[G.pace];
+  const oxPenalty = G.supplies.oxen < 2 ? 0 : (G.supplies.oxen < 4 ? 0.85 : 1.0);
+  const weatherPenalty = {clear:1.0,rain:0.7,storm:0.4,snow:0.5,fog:0.6,dust:0.65}[G.weather]||1.0;
+  return Math.floor(base * oxPenalty * weatherPenalty);
+}
+
+function getFoodPerDay() {
+  const alive = G.party.filter(m=>m.health>0).length;
+  const base = {filling:3.0, meager:2.0, bare:1.0}[G.rations];
+  const mult = OCCUPATIONS[G.occupation].foodMultiplier;
+  return alive * base * mult;
+}
+
+function getHealthDelta(member) {
+  if (member.health <= 0) return 0;
+  let delta = 0;
+  const foodPct = G.supplies.food > getFoodPerDay() * 5 ? 1 : (G.supplies.food > 0 ? 0.5 : 0);
+  if (G.rations === 'filling' && foodPct === 1) delta += 1;
+  else if (G.rations === 'meager') delta -= 1;
+  else if (G.rations === 'bare') delta -= 3;
+  if (foodPct === 0) delta -= 5;
+  if (member.sick) delta -= {Easy:3,Medium:5,Hard:8}['Easy'] - 2;
+  if (member.sickDays > 0) { delta -= 3; member.sickDays--; if(member.sickDays<=0){member.sick=false;member.condition='Recovering';}}
+  if (G.pace === 'strenuous') delta -= 1;
+  if (G.pace === 'exhausting') delta -= 3;
+  if (G.weather === 'snow' || G.weather === 'storm') delta -= 2;
+  return delta;
+}
+
+function getCondition(health) {
+  if (health <= 0) return 'Dead';
+  if (health >= 85) return 'Good';
+  if (health >= 65) return 'Fair';
+  if (health >= 40) return 'Poor';
+  if (health >= 20) return 'Very Poor';
+  return 'Critical';
+}
+
+function getMorale() {
+  const alive = G.party.filter(m=>m.health>0);
+  if (!alive.length) return 0;
+  const avgH = alive.reduce((s,m)=>s+m.health,0)/alive.length;
+  const foodSafe = G.supplies.food > getFoodPerDay()*10 ? 20 : (G.supplies.food > getFoodPerDay()*3 ? 0 : -20);
+  return Math.max(0, Math.min(100, avgH + foodSafe));
+}
+
+function getMoraleText(m) {
+  if (m >= 80) return 'Excellent';
+  if (m >= 60) return 'Good';
+  if (m >= 40) return 'Fair';
+  if (m >= 20) return 'Poor';
+  return 'Desperate';
+}
+
+function getLivingCount() { return G.party.filter(m=>m.health>0).length; }
+
+function advanceDay() {
+  if (G.supplies.oxen < 2) {
+    showEvent({
+      icon:'🐂',title:'No Oxen!',
+      desc:'You have fewer than 2 oxen. You cannot move the wagon. Find oxen at a fort or trading post.',
+      choices:[{label:'Understood',fn:()=>closeEvent()}]
+    }); return;
+  }
+  if (G.delayDays > 0) {
+    addLog(`Delayed — ${G.delayDays} day(s) remaining.`,'warn');
+    G.delayDays--;
+    advanceDate();
+    G.totalDays++;
+    consumeResources(false);
+    updateUI();
+    return;
+  }
+
+  const miles = getPaceMiles();
+  G.distance = Math.min(G.distance + miles, TOTAL_DISTANCE);
+  advanceDate();
+  G.totalDays++;
+
+  // Consume food
+  consumeResources(true);
+
+  // Random weather
+  updateWeather();
+
+  // Chance of random event (25% per day)
+  const eventRoll = Math.random();
+  if (eventRoll < 0.25) { triggerRandomEvent(); return; }
+
+  // Check for landmark
+  if (checkLandmark()) return;
+
+  // Check win/loss
+  if (checkGameOver()) return;
+
+  addLog(`${dateStr()} — Traveled ${miles} miles. Total: ${G.distance} of 2,000 miles.`);
+  updateUI();
+}
+
+function consumeResources(moving) {
+  const food = getFoodPerDay();
+  if (G.supplies.food >= food) {
+    G.supplies.food = Math.max(0, G.supplies.food - food);
+  } else {
+    const deficit = food - G.supplies.food;
+    G.supplies.food = 0;
+    addLog('Out of food! Your party goes hungry.','critical');
+  }
+
+  // Update party health
+  G.party.forEach(m => {
+    if (m.health <= 0) return;
+    const delta = getHealthDelta(m);
+    m.health = Math.max(0, Math.min(100, m.health + delta));
+    m.condition = getCondition(m.health);
+    if (m.health <= 0) {
+      addLog(`${m.name} has died.`,'critical');
+      m.condition = 'Dead';
+    }
+  });
+
+  // Pace damage to oxen
+  if (moving && G.pace === 'exhausting' && Math.random() < 0.15) {
+    G.supplies.oxen = Math.max(0, G.supplies.oxen - 1);
+    addLog('An ox dies from exhaustion!','critical');
+  }
+}
+
+function updateWeather() {
+  const month = G.month;
+  const weathers = month <= 4 || month >= 10
+    ? ['clear','rain','storm','snow','fog','clear','clear']
+    : ['clear','clear','clear','rain','dust','fog','clear','clear','clear'];
+  G.weather = weathers[Math.floor(Math.random() * weathers.length)];
+}
+
+function triggerRandomEvent() {
+  const roll = Math.random();
+
+  if (roll < 0.28) {
+    // Illness
+    const alive = G.party.filter(m=>m.health>0&&!m.sick);
+    if (!alive.length) { checkLandmark(); updateUI(); return; }
+    const victim = alive[Math.floor(Math.random()*alive.length)];
+    const illness = ILLNESSES[Math.floor(Math.random()*ILLNESSES.length)];
+    victim.sick = true;
+    victim.sickDays = Math.floor(3 + Math.random()*5);
+    victim.condition = illness.name;
+
+    showEvent({
+      icon: illness.icon,
+      title: illness.name + '!',
+      desc: illness.desc + ` ${victim.name} is afflicted.`,
+      choices: [
+        {label:`Use Medicine Kit (${G.supplies.medicine} available)`, fn:()=>{
+          if (G.supplies.medicine > 0) {
+            G.supplies.medicine--;
+            victim.sickDays = Math.floor(victim.sickDays * 0.3);
+            victim.health = Math.max(victim.health - 15, 10);
+            showEventResult(`You administer medicine. ${victim.name}'s condition improves. Recovery will be faster.`);
+          } else {
+            victim.health -= 20;
+            showEventResult(`No medicine! ${victim.name} must suffer through it without treatment.`);
+          }
+        }},
+        {label:'Rest for 2 days', fn:()=>{
+          G.delayDays += 2;
+          victim.health -= 10;
+          showEventResult(`You make camp and rest. ${victim.name} rests but is still weak.`);
+        }},
+        {label:'Continue on and hope for the best', fn:()=>{
+          victim.health -= 25;
+          showEventResult(`You press on. ${victim.name} grows weaker under the strain of travel.`);
+        }},
+      ]
+    });
+
+  } else if (roll < 0.44) {
+    // Wagon damage
+    const wev = WAGON_EVENTS[Math.floor(Math.random()*WAGON_EVENTS.length)];
+    const hasPart = G.supplies[wev.part] > 0;
+    const canRepairFree = G.occupation === 'carpenter' && !G.carpenterRepairUsed;
+
+    showEvent({
+      icon: wev.icon,
+      title: wev.title,
+      desc: wev.desc + (hasPart ? ` You have a spare.` : (canRepairFree ? ' As a carpenter, you can improvise a repair.' : ` You have no spare ${wev.partName}!`)),
+      choices: hasPart ? [
+        {label:`Replace with spare ${wev.partName} (1 used)`, fn:()=>{
+          G.supplies[wev.part]--;
+          G.wagonHealth = Math.min(100, G.wagonHealth + 15);
+          showEventResult(`The spare ${wev.partName} is installed. The wagon is repaired and ready to roll.`);
+        }},
+      ] : canRepairFree ? [
+        {label:'Improvise repair (carpenter skill)', fn:()=>{
+          G.carpenterRepairUsed = true;
+          G.delayDays += 1;
+          showEventResult('Your carpentry skills save the day! The repair takes a day but holds firm.');
+        }},
+      ] : [
+        {label:'Abandon some cargo to reduce weight', fn:()=>{
+          const lostFood = Math.floor(G.supplies.food * 0.25);
+          G.supplies.food -= lostFood;
+          G.wagonHealth -= 20;
+          G.delayDays += 3;
+          showEventResult(`You rig a temporary fix and discard ${lostFood} lbs of food. The wagon limps along — 3 day delay.`);
+        }},
+        {label:'Leave wagon and continue on foot', fn:()=>{
+          G.party.forEach(m=>{if(m.health>0)m.health-=30;});
+          showEventResult('You abandon the wagon and continue on foot. The journey on foot is brutal for everyone.');
+        }},
+      ]
+    });
+
+  } else if (roll < 0.56) {
+    // Weather
+    const wev = BAD_WEATHER[Math.floor(Math.random()*BAD_WEATHER.length)];
+    showEvent({
+      icon: wev.icon, title: wev.title, desc: wev.desc,
+      choices: [{label:'Wait it out', fn:()=>{ wev.effect(G); showEventResult('You hunker down and wait for conditions to improve.'); }}]
+    });
+
+  } else if (roll < 0.64) {
+    // Theft
+    const tev = THEFT_EVENTS[Math.floor(Math.random()*THEFT_EVENTS.length)];
+    showEvent({
+      icon: tev.icon, title: tev.title, desc: tev.desc,
+      choices: [
+        {label:'Accept the loss and move on', fn:()=>{ tev.effect(G); showEventResult('You survey the damage and count your remaining supplies.'); }},
+      ]
+    });
+
+  } else if (roll < 0.82) {
+    // Good event
+    const gev = GOOD_EVENTS[Math.floor(Math.random()*GOOD_EVENTS.length)];
+    showEvent({
+      icon: gev.icon, title: gev.title, desc: gev.desc,
+      choices: [{label:'Wonderful! Continue.', fn:()=>{ gev.effect(G); closeEvent(); }}]
+    });
+
+  } else {
+    // No notable event
+    checkLandmark();
+    updateUI();
+  }
+}
+
+function checkLandmark() {
+  const upcoming = LANDMARKS.filter(lm =>
+    lm.miles <= G.distance && !G.visitedLandmarks.includes(lm.name)
+  );
+  if (!upcoming.length) return false;
+  const lm = upcoming[0];
+  G.visitedLandmarks.push(lm.name);
+
+  if (lm.type === 'river') {
+    showRiver(lm);
+    return true;
+  } else if (lm.type === 'fort') {
+    showFort(lm);
+    return true;
+  } else {
+    showLandmarkNotice(lm);
+    return true;
+  }
+}
+
+function checkGameOver() {
+  const alive = getLivingCount();
+  if (alive === 0) {
+    showGameOver(false, 'Your entire party has perished on the trail.');
+    return true;
+  }
+  if (G.party[0].health <= 0) {
+    showGameOver(false, 'You have perished. Your party continues without a leader, but does not survive long.');
+    return true;
+  }
+  if (G.distance >= TOTAL_DISTANCE) {
+    G.survivors = alive;
+    showGameOver(true, '');
+    return true;
+  }
+  if (isWinterDeadline() && G.month >= 11) {
+    showGameOver(false, 'Winter has closed the mountain passes. Your party is trapped by snow and does not survive.');
+    return true;
+  }
+  return false;
+}
+
+// ═══════════════════════════════════════════
+// UI UPDATE
+// ═══════════════════════════════════════════
+
+function updateUI() {
+  updateTopBar();
+  updatePartyList();
+  updateSupplyList();
+  updateWagonOnMap();
+}
+
+function updateTopBar() {
+  document.getElementById('top-date').textContent = dateStr();
+  document.getElementById('top-dist').textContent = G.distance + ' mi';
+  document.getElementById('top-remain').textContent = (TOTAL_DISTANCE - G.distance) + ' mi';
+  const weatherEmoji = {clear:'☀️',rain:'🌧️',storm:'⛈️',snow:'❄️',fog:'🌫️',dust:'💨'}[G.weather]||'☀️';
+  const weatherName = {clear:'Clear',rain:'Rainy',storm:'Storm',snow:'Snowing',fog:'Foggy',dust:'Dusty'}[G.weather]||'Clear';
+  document.getElementById('top-weather').textContent = `${weatherName} ${weatherEmoji}`;
+  const m = getMorale();
+  document.getElementById('top-morale').textContent = getMoraleText(m);
+}
+
+function updatePartyList() {
+  const list = document.getElementById('party-list');
+  list.innerHTML = G.party.map(m => {
+    const pct = Math.max(0, m.health);
+    const cls = pct >= 85 ? 'health-good' : pct >= 65 ? 'health-fair' : pct >= 40 ? 'health-poor' : pct > 0 ? 'health-critical' : 'health-dead';
+    return `<div class="party-member">
+      <span class="member-name${pct<=0?' dead':''}">${m.name}</span>
+      <div class="health-bar-wrap"><div class="health-bar ${cls}" style="width:${pct}%"></div></div>
+      <span class="member-status" style="color:${pct<=0?'#888':pct<40?'var(--rust)':'var(--inkl)'}">${m.condition}</span>
+    </div>`;
+  }).join('');
+}
+
+function updateSupplyList() {
+  const s = G.supplies;
+  const foodWarn = s.food < getFoodPerDay()*3;
+  const oxWarn = s.oxen < 2;
+  document.getElementById('supply-list').innerHTML = `
+    <div class="supply-row"><span class="supply-icon">🍖</span><span class="supply-name">Food</span><span class="supply-val ${foodWarn?'supply-warn':''}">${Math.floor(s.food)} lbs</span></div>
+    <div class="supply-row"><span class="supply-icon">🐂</span><span class="supply-name">Oxen</span><span class="supply-val ${oxWarn?'supply-warn':''}">${s.oxen}</span></div>
+    <div class="supply-row"><span class="supply-icon">💰</span><span class="supply-name">Money</span><span class="supply-val">$${s.money||G.money||0}</span></div>
+    <div class="supply-row"><span class="supply-icon">🔫</span><span class="supply-name">Ammo</span><span class="supply-val">${s.ammo} boxes</span></div>
+    <div class="supply-row"><span class="supply-icon">💊</span><span class="supply-name">Medicine</span><span class="supply-val">${s.medicine} kits</span></div>
+    <div class="supply-row"><span class="supply-icon">🛞</span><span class="supply-name">Spare Parts</span><span class="supply-val">W:${s.wheels} A:${s.axles} T:${s.tongues}</span></div>
+    <div style="margin-top:6px;font-family:var(--fb);font-size:11px;color:var(--inkl);">Trail Progress</div>
+  `;
+  const pct = (G.distance / TOTAL_DISTANCE * 100).toFixed(1);
+  document.getElementById('trail-progress').style.width = pct + '%';
+}
+
+function addLog(msg, type='') {
+  const panel = document.getElementById('log-panel');
+  const entry = document.createElement('div');
+  entry.className = `log-entry${type ? ' log-'+type : ''}`;
+  entry.innerHTML = `<span class="log-date">[${dateStr()}]</span> ${msg}`;
+  panel.appendChild(entry);
+  panel.scrollTop = panel.scrollHeight;
+  G.log.push({date:dateStr(), msg, type});
+}
+
+// ═══════════════════════════════════════════
+// PACE & RATIONS
+// ═══════════════════════════════════════════
+
+function setPace(pace, btn) {
+  G.pace = pace;
+  document.querySelectorAll('#pace-controls .ctrl-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function setRations(rations, btn) {
+  G.rations = rations;
+  document.querySelectorAll('#ration-controls .ctrl-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ═══════════════════════════════════════════
+// REST
+// ═══════════════════════════════════════════
+
+function restDay() {
+  G.totalDays++;
+  advanceDate();
+  consumeResources(false);
+
+  // Resting heals party
+  G.party.forEach(m => {
+    if (m.health > 0 && m.health < 100) m.health = Math.min(100, m.health + 8);
+    m.condition = getCondition(m.health);
+  });
+
+  addLog('You rest at camp. The party recovers some strength.','good');
+  if (checkGameOver()) return;
+  updateUI();
+}
+
+function checkStatus() {
+  const lines = G.party.map(m=>`${m.name}: ${m.condition} (${Math.floor(m.health)}%)`).join('\n');
+  const food = Math.floor(G.supplies.food);
+  const days = food > 0 ? Math.floor(food / getFoodPerDay()) : 0;
+  showEvent({
+    icon:'📋', title:'Party Status Report',
+    desc:`Health:\n${lines}\n\nFood supply: ${food} lbs (≈${days} days remaining)\nOxen: ${G.supplies.oxen} | Ammo: ${G.supplies.ammo} boxes | Medicine: ${G.supplies.medicine} kits\nMoney: $${(G.money||0).toFixed?.(2)||G.money}\nWagon health: ${G.wagonHealth}%`,
+    choices:[{label:'Close', fn:()=>closeEvent()}]
+  });
+}
+
+// ═══════════════════════════════════════════
+// EVENT MODAL
+// ═══════════════════════════════════════════
+
+function showEvent(evt) {
+  document.getElementById('event-title').textContent = evt.title;
+  document.getElementById('event-icon').textContent = evt.icon;
+  document.getElementById('event-desc').textContent = evt.desc;
+  document.getElementById('event-result').style.display = 'none';
+  const choices = document.getElementById('event-choices');
+  choices.innerHTML = evt.choices.map((c,i)=>`
+    <button class="choice-btn" onclick="handleChoice(${i})">${c.label}</button>
+  `).join('');
+  choices._choices = evt.choices;
+  show('event-modal','flex');
+}
+
+function handleChoice(i) {
+  const choices = document.getElementById('event-choices')._choices;
+  if (choices && choices[i]) choices[i].fn();
+}
+
+function showEventResult(msg) {
+  document.getElementById('event-choices').innerHTML = '';
+  const result = document.getElementById('event-result');
+  result.textContent = msg;
+  result.style.display = 'block';
+
+  setTimeout(() => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = 'Continue your journey →';
+    btn.onclick = () => { closeEvent(); };
+    document.getElementById('event-choices').appendChild(btn);
+  }, 800);
+}
+
+function closeEvent() {
+  hide('event-modal');
+  checkLandmark();
+  if (!checkGameOver()) updateUI();
+}
+
+// ═══════════════════════════════════════════
+// HUNTING MINI-GAME
+// ═══════════════════════════════════════════
+
+function goHunting() {
+  if (G.supplies.ammo <= 0) {
+    showEvent({
+      icon:'🔫', title:'No Ammunition!',
+      desc:'You have no ammunition for hunting. Buy more at the next fort.',
+      choices:[{label:'Return to camp',fn:()=>closeEvent()}]
+    }); return;
+  }
+  hide('event-modal');
+  show('hunt-screen','flex');
+  startHunting();
+}
+
+function startHunting() {
+  const canvas = document.getElementById('hunt-canvas');
+  const ctx = canvas.getContext('2d');
+  // Fit canvas to wrapper
+  const wrap = canvas.parentElement;
+  canvas.width = Math.min(900, wrap.clientWidth - 20);
+  canvas.height = Math.min(360, wrap.clientHeight - 20);
+
+  huntData = {
+    ammo: G.supplies.ammo * 50,
+    foodGained: 0,
+    animals: [],
+    secondsLeft: 40,
+    running: true,
+    spawnTimer: 0,
+    maxCarry: 200,
+  };
+
+  document.getElementById('hunt-ammo').textContent = huntData.ammo;
+  document.getElementById('hunt-food').textContent = '0 lbs';
+  document.getElementById('hunt-time').textContent = '40s';
+  document.getElementById('hunt-timer-bar').style.width = '100%';
+  document.getElementById('hunt-footer').textContent = 'Hunt wisely — you can carry at most 200 lbs of meat back to camp.';
+
+  canvas.onclick = handleShot;
+
+  huntTimerInterval = setInterval(() => {
+    huntData.secondsLeft--;
+    document.getElementById('hunt-time').textContent = huntData.secondsLeft + 's';
+    document.getElementById('hunt-timer-bar').style.width = (huntData.secondsLeft/40*100)+'%';
+    if (huntData.secondsLeft <= 0 || huntData.ammo <= 0) endHunting();
+  }, 1000);
+
+  drawHuntLoop(ctx, canvas);
+}
+
+function spawnAnimal(canvas) {
+  const types = [
+    {type:'squirrel',w:18,h:14,speed:-3.2,food:2,color:'#5a3a20'},
+    {type:'rabbit',  w:26,h:22,speed:-2.5,food:5,color:'#7a6040'},
+    {type:'deer',    w:48,h:40,speed:-1.8,food:100,color:'#4a3020'},
+    {type:'deer',    w:48,h:40,speed:-1.8,food:100,color:'#4a3020'},
+    {type:'buffalo', w:70,h:52,speed:-1.2,food:400,color:'#2a1a10'},
+  ];
+  const t = types[Math.floor(Math.random()*types.length)];
+  const groundY = canvas.height * 0.72;
+  huntData.animals.push({
+    ...t,
+    x: canvas.width + 10,
+    y: groundY - t.h,
+    hit: false, opacity: 1,
+    bounce: 0, bounceDir: 1
+  });
+}
+
+function drawHuntLoop(ctx, canvas) {
+  if (!huntData.running) return;
+
+  huntData.spawnTimer++;
+  if (huntData.spawnTimer >= 70 && huntData.animals.length < 5) {
+    huntData.spawnTimer = 0;
+    spawnAnimal(canvas);
+    if (Math.random() < 0.3) spawnAnimal(canvas); // chance of pair
+  }
+
+  // Draw scene
+  const W = canvas.width, H = canvas.height;
+  const groundY = H * 0.72;
+
+  // Sky
+  const sky = ctx.createLinearGradient(0,0,0,groundY);
+  sky.addColorStop(0,'#87ceeb'); sky.addColorStop(1,'#c5e8f5');
+  ctx.fillStyle = sky; ctx.fillRect(0,0,W,groundY);
+
+  // Mountains
+  ctx.fillStyle = '#9aab8a';
+  ctx.beginPath();
+  ctx.moveTo(0,groundY);
+  [0,80,160,240,320,400,480,560,640,720,800,880,W].forEach((x,i)=>{
+    const y = i%2===0 ? groundY-40 : groundY-85;
+    ctx.lineTo(x,y);
+  });
+  ctx.lineTo(W,groundY); ctx.closePath(); ctx.fill();
+
+  // Ground
+  const ground = ctx.createLinearGradient(0,groundY,0,H);
+  ground.addColorStop(0,'#8a7a3a'); ground.addColorStop(0.3,'#7a6a2a'); ground.addColorStop(1,'#5a4a18');
+  ctx.fillStyle = ground; ctx.fillRect(0,groundY,W,H-groundY);
+
+  // Grass tufts
+  ctx.fillStyle = '#6a7a30';
+  for(let x=20;x<W;x+=40) {
+    ctx.fillRect(x, groundY-3, 8, 6);
+    ctx.fillRect(x+15, groundY-2, 5, 4);
+  }
+
+  // Trail
+  ctx.fillStyle = 'rgba(180,150,80,0.5)';
+  ctx.fillRect(0, groundY+5, W, 22);
+
+  // Animals
+  huntData.animals.forEach(a => {
+    a.bounce += 0.2 * a.bounceDir;
+    if(Math.abs(a.bounce) > 2) a.bounceDir *= -1;
+
+    if (!a.hit) {
+      a.x += a.speed;
+    } else {
+      a.opacity = Math.max(0, a.opacity - 0.06);
+    }
+
+    ctx.save();
+    ctx.globalAlpha = a.opacity;
+    drawAnimal(ctx, a);
+    ctx.restore();
+  });
+
+  // Remove off-screen or faded
+  huntData.animals = huntData.animals.filter(a => a.x > -120 && a.opacity > 0);
+
+  huntAnimFrame = requestAnimationFrame(() => drawHuntLoop(ctx, canvas));
+}
+
+function drawAnimal(ctx, a) {
+  ctx.fillStyle = a.color;
+  const yOff = Math.sin(a.bounce * 0.5) * 1.5;
+
+  if (a.type === 'buffalo') {
+    // Hump body
+    ctx.beginPath();
+    ctx.ellipse(a.x+a.w*0.45, a.y+a.h*0.5+yOff, a.w*0.45, a.h*0.38, 0, 0, Math.PI*2);
+    ctx.fill();
+    // Hump
+    ctx.beginPath();
+    ctx.ellipse(a.x+a.w*0.6, a.y+a.h*0.25+yOff, a.w*0.22, a.h*0.28, 0, 0, Math.PI*2);
+    ctx.fill();
+    // Head
+    ctx.beginPath();
+    ctx.ellipse(a.x+a.w*0.88, a.y+a.h*0.38+yOff, a.w*0.18, a.h*0.2, 0.3, 0, Math.PI*2);
+    ctx.fill();
+    // Legs
+    ctx.strokeStyle = a.color; ctx.lineWidth = 5;
+    [0.2,0.35,0.55,0.7].forEach(lx=>{
+      ctx.beginPath();
+      ctx.moveTo(a.x+a.w*lx, a.y+a.h*0.78+yOff);
+      ctx.lineTo(a.x+a.w*lx, a.y+a.h+yOff);
+      ctx.stroke();
+    });
+  } else if (a.type === 'deer') {
+    // Body
+    ctx.beginPath();
+    ctx.ellipse(a.x+a.w*0.45, a.y+a.h*0.55+yOff, a.w*0.38, a.h*0.28, 0, 0, Math.PI*2);
+    ctx.fill();
+    // Neck
+    ctx.fillRect(a.x+a.w*0.7, a.y+a.h*0.2+yOff, a.w*0.1, a.h*0.35);
+    // Head
+    ctx.beginPath();
+    ctx.ellipse(a.x+a.w*0.82, a.y+a.h*0.15+yOff, a.w*0.14, a.h*0.13, 0, 0, Math.PI*2);
+    ctx.fill();
+    // Antlers
+    ctx.strokeStyle=a.color; ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(a.x+a.w*0.78,a.y+a.h*0.07+yOff);
+    ctx.lineTo(a.x+a.w*0.7,a.y-4+yOff);
+    ctx.moveTo(a.x+a.w*0.86,a.y+a.h*0.07+yOff);
+    ctx.lineTo(a.x+a.w*0.94,a.y-4+yOff);
+    ctx.stroke();
+    // Legs
+    ctx.strokeStyle=a.color; ctx.lineWidth=3;
+    [0.22,0.35,0.52,0.65].forEach(lx=>{
+      ctx.beginPath();
+      ctx.moveTo(a.x+a.w*lx, a.y+a.h*0.76+yOff);
+      ctx.lineTo(a.x+a.w*(lx+0.02), a.y+a.h+yOff);
+      ctx.stroke();
+    });
+  } else if (a.type === 'rabbit') {
+    // Body
+    ctx.beginPath();
+    ctx.ellipse(a.x+a.w*0.5, a.y+a.h*0.65+yOff, a.w*0.35, a.h*0.28, 0, 0, Math.PI*2);
+    ctx.fill();
+    // Head
+    ctx.beginPath();
+    ctx.ellipse(a.x+a.w*0.75, a.y+a.h*0.4+yOff, a.w*0.22, a.h*0.22, 0, 0, Math.PI*2);
+    ctx.fill();
+    // Ears
+    ctx.fillRect(a.x+a.w*0.68, a.y+yOff, a.w*0.07, a.h*0.32);
+    ctx.fillRect(a.x+a.w*0.8, a.y+yOff, a.w*0.07, a.h*0.32);
+  } else {
+    // Squirrel
+    ctx.beginPath();
+    ctx.ellipse(a.x+a.w*0.5, a.y+a.h*0.65+yOff, a.w*0.3, a.h*0.25, 0, 0, Math.PI*2);
+    ctx.fill();
+    // Head
+    ctx.beginPath();
+    ctx.ellipse(a.x+a.w*0.75, a.y+a.h*0.4+yOff, a.w*0.2, a.h*0.2, 0, 0, Math.PI*2);
+    ctx.fill();
+    // Tail (curl)
+    ctx.strokeStyle=a.color; ctx.lineWidth=3;
+    ctx.beginPath();
+    ctx.arc(a.x+a.w*0.22, a.y+a.h*0.5+yOff, a.h*0.28, -0.5, Math.PI*1.5);
+    ctx.stroke();
+  }
+
+  // Hit marker (red X)
+  if (a.hit) {
+    ctx.strokeStyle='#cc2222'; ctx.lineWidth=3;
+    ctx.beginPath();
+    ctx.moveTo(a.x+a.w*0.3,a.y+a.h*0.3+yOff);
+    ctx.lineTo(a.x+a.w*0.7,a.y+a.h*0.7+yOff);
+    ctx.moveTo(a.x+a.w*0.7,a.y+a.h*0.3+yOff);
+    ctx.lineTo(a.x+a.w*0.3,a.y+a.h*0.7+yOff);
+    ctx.stroke();
+  }
+}
+
+function handleShot(e) {
+  if (!huntData.running) return;
+  if (huntData.ammo <= 0) return;
+
+  huntData.ammo--;
+  const boxesUsed = Math.ceil((G.supplies.ammo * 50 - huntData.ammo) / 50);
+  G.supplies.ammo = Math.max(0, G.supplies.ammo * 50 - (G.supplies.ammo * 50 - huntData.ammo)) / 50;
+  document.getElementById('hunt-ammo').textContent = huntData.ammo;
+
+  const rect = e.target.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+
+  let hit = false;
+  huntData.animals.forEach(a => {
+    if (a.hit) return;
+    if (mx >= a.x && mx <= a.x + a.w && my >= a.y && my <= a.y + a.h) {
+      a.hit = true;
+      const food = Math.min(a.food, huntData.maxCarry - huntData.foodGained);
+      huntData.foodGained += food;
+      document.getElementById('hunt-food').textContent = huntData.foodGained + ' lbs';
+      hit = true;
+      if (huntData.foodGained >= huntData.maxCarry) {
+        document.getElementById('hunt-footer').textContent = `Wagon full! ${huntData.foodGained} lbs of meat. Head back to camp.`;
+        endHunting();
+      }
+    }
+  });
+
+  if (huntData.ammo <= 0) endHunting();
+}
+
+function endHunting() {
+  if (!huntData.running) return;
+  huntData.running = false;
+  clearInterval(huntTimerInterval);
+  cancelAnimationFrame(huntAnimFrame);
+
+  // Calculate ammo boxes used
+  const ammoUsed = Math.ceil((G.supplies.ammo * 50 - huntData.ammo) / 50);
+  G.supplies.ammo = Math.floor(huntData.ammo / 50);
+
+  // Add food
+  G.supplies.food += huntData.foodGained;
+
+  const canvas = document.getElementById('hunt-canvas');
+  canvas.onclick = null;
+
+  document.getElementById('hunt-footer').innerHTML = `
+    <strong>Hunt complete!</strong> You bagged ${huntData.foodGained} lbs of meat and used ${G.supplies.ammo*50+huntData.ammo%50} bullets. 
+    <button class="btn-primary" style="margin-left:16px;font-size:13px;padding:8px 20px;" onclick="endHuntScreen()">Return to Trail</button>
+  `;
+}
+
+function endHuntScreen() {
+  hide('hunt-screen');
+  addLog(`Returned from hunt with ${huntData.foodGained} lbs of meat. Total food: ${Math.floor(G.supplies.food)} lbs.`,'good');
+  advanceDate();
+  G.totalDays++;
+  consumeResources(false);
+  if (!checkGameOver()) updateUI();
+}
+
+// ═══════════════════════════════════════════
+// RIVER CROSSING
+// ═══════════════════════════════════════════
+
+function showRiver(lm) {
+  const river = lm.river;
+  document.getElementById('river-title').textContent = `⛵ ${lm.name}`;
+  document.getElementById('river-info').innerHTML = `
+    <div class="river-stat"><strong>Depth:</strong> ${river.depth}</div>
+    <div class="river-stat"><strong>Current:</strong> ${river.current}</div>
+    <div class="river-stat"><strong>Ferry Fee:</strong> $${river.ferryFee}</div>
+    <div class="river-stat"><strong>Date:</strong> ${dateStr()}</div>
+  `;
+  document.getElementById('river-desc').textContent = lm.desc;
+  document.getElementById('river-result').style.display = 'none';
+
+  const depth = parseFloat(river.depth);
+  const strongCurrent = river.current === 'Very Strong';
+  const moderateCurrent = river.current === 'Strong';
+  const fording = depth <= 3.5 ? 'Low risk' : depth <= 4.5 ? 'Moderate risk' : 'Very high risk';
+  const floating = strongCurrent ? 'High risk' : moderateCurrent ? 'Moderate risk' : 'Low risk';
+
+  document.getElementById('river-choices').innerHTML = `
+    <div class="river-choice" onclick="attemptFord(${depth}, '${river.current}')">
+      <span>🚶 Attempt to Ford the River</span><span class="risk">${fording}</span>
+    </div>
+    <div class="river-choice" onclick="caulkWagon('${river.current}')">
+      <span>⛵ Caulk the Wagon and Float</span><span class="risk">${floating} · Free</span>
+    </div>
+    <div class="river-choice" onclick="payFerry(${river.ferryFee})">
+      <span>🚢 Pay for a Ferry</span><span class="risk">Safe · $${river.ferryFee}</span>
+    </div>
+    <div class="river-choice" onclick="waitRiver()">
+      <span>⏳ Wait for River to Drop</span><span class="risk">3 day delay</span>
+    </div>
+  `;
+  show('river-screen','flex');
+}
+
+function showRiverResult(msg, then) {
+  document.getElementById('river-choices').innerHTML = '';
+  const result = document.getElementById('river-result');
+  result.textContent = msg;
+  result.style.display = 'block';
+  setTimeout(() => {
+    const btn = document.createElement('button');
+    btn.style.cssText='margin-top:10px;padding:10px 20px;background:var(--sage);border:none;color:var(--p);font-family:var(--fd);font-size:14px;cursor:pointer;';
+    btn.textContent = 'Continue Journey →';
+    btn.onclick = () => { hide('river-screen'); then(); };
+    result.appendChild(document.createElement('br'));
+    result.appendChild(btn);
+  }, 800);
+}
+
+function attemptFord(depth, current) {
+  const roll = Math.random();
+  const risk = depth > 4.5 ? 0.6 : depth > 3.5 ? 0.35 : 0.15;
+  if (roll < risk) {
+    // Bad crossing
+    const lostFood = Math.floor(G.supplies.food * (0.2 + Math.random() * 0.3));
+    G.supplies.food -= lostFood;
+    const victims = G.party.filter(m=>m.health>0);
+    if (victims.length && Math.random() < 0.4) {
+      const v = victims[Math.floor(Math.random()*victims.length)];
+      v.health -= 35;
+      v.condition = getCondition(v.health);
+      showRiverResult(`The crossing goes badly! ${lostFood} lbs of food is swept away and ${v.name} is hurt crossing the torrent.`, afterRiver);
+    } else {
+      showRiverResult(`The wagon is nearly swept away! You lose ${lostFood} lbs of food but make it across.`, afterRiver);
+    }
+    addLog('Dangerous ford — supplies lost.','warn');
+  } else {
+    showRiverResult('The ford is difficult but successful. Your wagon makes it across intact!', afterRiver);
+    addLog('River forded successfully.','good');
+  }
+}
+
+function caulkWagon(current) {
+  const roll = Math.random();
+  const risk = current === 'Very Strong' ? 0.55 : current === 'Strong' ? 0.35 : 0.15;
+  if (roll < risk) {
+    const lostFood = Math.floor(G.supplies.food * 0.3);
+    G.supplies.food -= lostFood;
+    if (G.supplies.oxen > 0 && Math.random() < 0.4) {
+      G.supplies.oxen--;
+      showRiverResult(`The wagon capsizes in the current! An ox drowns and ${lostFood} lbs of food is lost.`, afterRiver);
+      addLog('Wagon capsized crossing river — ox lost.','critical');
+    } else {
+      showRiverResult(`The wagon takes on water and spins violently, but you pull through. ${lostFood} lbs of food is ruined.`, afterRiver);
+      addLog('Rough crossing — food lost.','warn');
+    }
+  } else {
+    showRiverResult('The wagon floats across steadily. A tense few minutes, but you arrive safely on the far bank!', afterRiver);
+    addLog('River crossed by caulking wagon.','good');
+  }
+}
+
+function payFerry(fee) {
+  if (G.money < fee) {
+    document.getElementById('river-result').style.display='block';
+    document.getElementById('river-result').textContent = `You cannot afford the ferry fee of $${fee}. Choose another option.`;
+    setTimeout(()=>document.getElementById('river-result').style.display='none', 3000);
+    return;
+  }
+  G.money -= fee;
+  showRiverResult(`The ferryman poles your wagon safely across the river for $${fee}. A reliable if expensive crossing.`, afterRiver);
+  addLog(`Paid $${fee} for ferry crossing.`,'good');
+}
+
+function waitRiver() {
+  G.delayDays += 3;
+  G.supplies.food -= getFoodPerDay() * 3;
+  showRiverResult('You wait three days for the water to drop. The crossing is much easier now.', afterRiver);
+  addLog('Waited 3 days for river to subside.','warn');
+}
+
+function afterRiver() {
+  if (!checkGameOver()) updateUI();
+}
+
+// ═══════════════════════════════════════════
+// FORT / LANDMARK
+// ═══════════════════════════════════════════
+
+function showFort(lm) {
+  document.getElementById('fort-title').textContent = lm.icon + ' ' + lm.name;
+  document.getElementById('fort-miles').textContent = `${lm.miles} MILES FROM INDEPENDENCE`;
+  document.getElementById('fort-desc').textContent = lm.desc;
+  document.getElementById('trade-panel').style.display = 'none';
+
+  // Carpenter bonus
+  const showCarpenter = G.occupation === 'carpenter' && !G.carpenterRepairUsed;
+  document.getElementById('fort-carpenter-note').style.display = showCarpenter ? 'block' : 'none';
+  if (showCarpenter) {
+    G.carpenterRepairUsed = false; // can be used at this fort
+  }
+
+  renderTradeGrid(lm.tradeMultiplier || 1.2);
+  show('fort-screen','flex');
+  addLog(`Arrived at ${lm.name}!`,'landmark');
+}
+
+function showLandmarkNotice(lm) {
+  showEvent({
+    icon: lm.icon,
+    title: lm.name,
+    desc: lm.desc + (lm.miles === 820 && (G.month < 7 || (G.month === 7 && G.day <= 4)) ? '\n\n✓ You are on schedule! Reaching Independence Rock by July 4th is a good sign.' : ''),
+    choices: [{label:'Continue on →', fn:()=>closeEvent()}]
+  });
+  addLog(`Reached ${lm.name}!`,'landmark');
+}
+
+let fortTradeMultiplier = 1.2;
+
+function renderTradeGrid(mult) {
+  fortTradeMultiplier = mult;
+  document.getElementById('trade-cash').textContent = (G.money||0).toFixed(2);
+  const tradable = ['food','ammo','medicine','wheels','axles','tongues'];
+  document.getElementById('trade-grid').innerHTML = tradable.map(key=>{
+    const price = (STORE_PRICES[key].price * mult).toFixed(2);
+    return `<div class="trade-item">
+      <div>
+        <div class="trade-name">${STORE_PRICES[key].name.split('(')[0].trim()}</div>
+        <div class="trade-price">$${price}/${STORE_PRICES[key].unit}</div>
+      </div>
+      <div class="trade-qty-btns">
+        <button class="trade-qty-btn" onclick="tradeItem('${key}',-1,${price})">−</button>
+        <span class="trade-qty-val">${G.supplies[key]}</span>
+        <button class="trade-qty-btn" onclick="tradeItem('${key}',1,${price})">+</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function tradeItem(key, delta, price) {
+  const newVal = G.supplies[key] + delta;
+  if (newVal < 0) return;
+  const cost = delta * price;
+  if (cost > 0 && G.money < cost) {
+    alert(`Not enough money. You have $${(G.money||0).toFixed(2)}.`); return;
+  }
+  G.supplies[key] = newVal;
+  G.money = Math.max(0, (G.money||0) - cost);
+  renderTradeGrid(fortTradeMultiplier);
+  updateSupplyList();
+}
+
+function toggleTrade() {
+  const panel = document.getElementById('trade-panel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function fortRest() {
+  G.delayDays += 3;
+  G.party.forEach(m=>{ if(m.health>0) m.health=Math.min(100,m.health+20); m.condition=getCondition(m.health);});
+  // Carpenter repair
+  if (G.occupation === 'carpenter' && !G.carpenterRepairUsed) {
+    G.carpenterRepairUsed = true;
+    G.wagonHealth = Math.min(100, G.wagonHealth + 30);
+    addLog('Carpenter repaired wagon parts for free!','good');
+  }
+  addLog('Rested 3 days at the fort. Party health restored.','good');
+}
+
+function closeFort() {
+  hide('fort-screen');
+  if (!checkGameOver()) updateUI();
+}
+
+// ═══════════════════════════════════════════
+// GAME OVER
+// ═══════════════════════════════════════════
+
+function showGameOver(won, reason) {
+  hide('travel-screen');
+  const screen = document.getElementById('gameover-screen');
+  const border = document.getElementById('gameover-border');
+
+  screen.className = `gameover-screen ${won?'gameover-win':'gameover-lose'}`;
+  border.style.color = won ? 'var(--p)' : 'var(--p)';
+
+  if (won) {
+    document.getElementById('go-icon').textContent = '🌲';
+    document.getElementById('go-title').textContent = 'You Have Reached Oregon!';
+    const alive = G.party.filter(m=>m.health>0).map(m=>m.name).join(', ');
+    document.getElementById('go-msg').textContent =
+      `After ${G.totalDays} grueling days, your wagon rolls into Oregon City. The Pacific Coast stretches before you. ${alive} — you have made it!`;
+  } else {
+    document.getElementById('go-icon').textContent = '💀';
+    document.getElementById('go-title').textContent = 'Your Party Has Perished';
+    const lastMsg = G.party.find(m=>m.condition&&m.condition!=='Good'&&m.condition!=='Dead')?.condition;
+    document.getElementById('go-msg').textContent =
+      (lastMsg ? `You have died of ${lastMsg.toLowerCase()}.` : reason || 'The trail has claimed your party.') +
+      ` You traveled ${G.distance} of 2,000 miles — ${Math.round(G.distance/TOTAL_DISTANCE*100)}% of the journey.`;
+  }
+
+  const alive = G.party.filter(m=>m.health>0).length;
+  document.getElementById('go-stats').innerHTML = `
+    <div class="gs-stat"><div class="gs-label">Distance</div><div class="gs-value">${G.distance} mi</div></div>
+    <div class="gs-stat"><div class="gs-label">Survivors</div><div class="gs-value">${alive} / 5</div></div>
+    <div class="gs-stat"><div class="gs-label">Days Traveled</div><div class="gs-value">${G.totalDays}</div></div>
+    <div class="gs-stat"><div class="gs-label">Date</div><div class="gs-value">${dateStr()}</div></div>
+  `;
+
+  show('gameover-screen','flex');
+}
+
+function resetGame() {
+  G = {};
+  hide('gameover-screen');
+  if (mapObj) { mapObj.destroy(); mapObj = null; }
+  wagonMarker = null; arcgisReady = null;
+  _trailLayer = _landmarkLayer = _wagonLayer = _stateBordersLayer = _citiesLayer = null;
+  show('title-screen','flex');
+}
+
+// ═══════════════════════════════════════════
+// INSTRUCTIONS
+// ═══════════════════════════════════════════
+
+function showInstructions() {
+  showEvent({
+    icon:'📖',
+    title:'How to Play',
+    desc:`GOAL: Travel 2,000 miles from Independence, Missouri to Oregon City before winter closes the mountain passes (November).
+
+OCCUPATION: Choose your starting wealth and special ability.
+
+SUPPLIES: Buy food, oxen, ammunition, spare parts, and medicine before departing.
+
+TRAVEL: Click "Continue on Trail" each day. Manage your Pace (speed) and Rations (food per person).
+
+HUNTING: Stop to hunt for food when supplies run low. Click on animals to shoot them.
+
+RIVERS: You'll face dangerous crossings — ford, float, or pay for a ferry.
+
+EVENTS: Illness, weather, and accidents will challenge your party. Use medicine and supplies wisely.
+
+FORTS: Stop at forts to rest, trade, and repair your wagon.
+
+TIP: Keep at least 4 oxen, 200+ lbs of food, and spare wagon parts at all times!`,
+    choices:[{label:'Begin the Journey →', fn:()=>closeEvent()}]
+  });
+  // Override closeEvent for this case
+  document.querySelector('#event-choices .choice-btn').onclick = () => {
+    hide('event-modal');
+  };
+}
+
+// ═══════════════════════════════════════════
+// INITIALIZATION
+// ═══════════════════════════════════════════
+
+// Initialize game with partial state for occupation screen
+G = { occupation: null };
+show('title-screen','flex');
+
+// Make G.money accessible in store
+Object.defineProperty(G, 'displayMoney', { get: function() { return G.money || (G.occupation ? OCCUPATIONS[G.occupation].money : 0); }});
+</script>
+</body>
+</html>
