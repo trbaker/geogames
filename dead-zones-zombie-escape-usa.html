@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#070a07;--panel:#0c110c;--border:#1d3d1d;
+  --bg:#1e201e;--panel:#252825;--border:#2e4e2e;
   --green:#39ff14;--gdim:#155d10;--gfade:rgba(57,255,20,0.08);
   --red:#ff2a2a;--rdim:#6b0d0d;
   --amber:#ffb600;--safe:#00d4ff;
@@ -21,7 +21,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px);pointer-events:none;z-index:9998}
 
 /* ── INTRO ── */
-#intro{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;z-index:1000;transition:opacity .6s}
+#intro{position:fixed;inset:0;background:#1a1c1a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;z-index:1000;transition:opacity .6s}
 .i-bio{width:12px;height:12px;border-radius:50%;background:var(--red);box-shadow:0 0 18px var(--red);animation:biopulse 1.2s infinite alternate;margin-bottom:18px}
 @keyframes biopulse{from{transform:scale(1);opacity:.7}to{transform:scale(1.4);opacity:1}}
 .i-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(44px,9vw,110px);color:var(--red);letter-spacing:6px;line-height:1;animation:glitch 3s infinite}
@@ -238,6 +238,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
       <button class="hud-btn" onclick="panToPlayer()">📍 My Position</button>
       <button class="hud-btn" onclick="panToSafeZone()">🛡 Safe Zone</button>
       <button class="hud-btn" onclick="panToUSA()">🗺 Full Map</button>
+      <button class="hud-btn" id="giveup-btn" onclick="giveUp()" style="color:var(--red);border-color:var(--rdim)">🏳 I Give Up</button>
     </div>
   </div>
 
@@ -873,6 +874,14 @@ function panToSafeZone(){
   G.map.setView([D.lat,D.lng],7,{animate:true});
 }
 function panToUSA(){ if(G.map)G.map.setView([38,-96],4,{animate:true}); }
+
+// ══════════════════════════════════════════════════
+// GIVE UP
+// ══════════════════════════════════════════════════
+function giveUp(){
+  if(G.over)return;
+  doLose('You chose to stop. The Safe Zone was still out there — try again!');
+}
 
 // ══════════════════════════════════════════════════
 // RESET
