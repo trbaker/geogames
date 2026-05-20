@@ -840,7 +840,8 @@ function doWin(){
     Medicine Remaining: <strong>${Math.round(G.med)}%</strong><br>
     Supply Stops Found: <strong>${G.collected.size} of ${STOPS.length}</strong>
   `;
-  document.getElementById('result').classList.add('show');
+  const rEl=document.getElementById('result');
+  rEl.style.display='flex';rEl.classList.add('show');
   addLog('🛡 SAFE ZONE REACHED — MISSION COMPLETE!','ok');
 }
 
@@ -861,7 +862,8 @@ function doLose(reason){
     Supply Stops Found: <strong>${G.collected.size} of ${STOPS.length}</strong><br><br>
     <span style="color:#ffb600">Tip: Study the map before moving. Find supply stops<br>along your route. Watch zombie zone expansion!</span>
   `;
-  document.getElementById('result').classList.add('show');
+  const rEl=document.getElementById('result');
+  rEl.style.display='flex';rEl.classList.add('show');
 }
 
 // ══════════════════════════════════════════════════
