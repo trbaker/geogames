@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dead Zones: Zombie Escape USA</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070a07;--panel:#0c110c;--border:#1d3d1d;
+  --green:#39ff14;--gdim:#155d10;--gfade:rgba(57,255,20,0.08);
+  --red:#ff2a2a;--rdim:#6b0d0d;
+  --amber:#ffb600;--safe:#00d4ff;
+  --text:#7abf7a;--white:#cce8cc;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace}
+
+/* scanlines */
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px);pointer-events:none;z-index:9998}
+
+/* ── INTRO ── */
+#intro{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;z-index:1000;transition:opacity .6s}
+.i-bio{width:12px;height:12px;border-radius:50%;background:var(--red);box-shadow:0 0 18px var(--red);animation:biopulse 1.2s infinite alternate;margin-bottom:18px}
+@keyframes biopulse{from{transform:scale(1);opacity:.7}to{transform:scale(1.4);opacity:1}}
+.i-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(44px,9vw,110px);color:var(--red);letter-spacing:6px;line-height:1;animation:glitch 3s infinite}
+.i-sub{font-family:'Orbitron',monospace;font-size:clamp(11px,1.8vw,17px);color:var(--amber);letter-spacing:9px;margin-top:6px;animation:blink 2s infinite}
+@keyframes glitch{0%,88%,100%{transform:none;filter:none}90%{transform:translate(-4px,1px);filter:hue-rotate(80deg)}92%{transform:translate(4px,-1px);filter:none}94%{transform:translate(-2px,2px)}96%{transform:none}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.45}}
+.i-brief{max-width:580px;text-align:center;line-height:1.85;margin:28px 20px;font-size:13px;border:1px solid var(--border);padding:22px;color:var(--white)}
+.i-brief span{color:var(--amber)}
+.btn{font-family:'Orbitron',monospace;font-weight:700;color:#000;background:var(--green);border:none;padding:13px 38px;cursor:pointer;letter-spacing:3px;text-transform:uppercase;font-size:15px;box-shadow:0 0 22px rgba(57,255,20,.55);clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));transition:all .2s}
+.btn:hover{background:#fff;box-shadow:0 0 40px rgba(57,255,20,.9);transform:scale(1.04)}
+.btn.danger-btn{background:var(--red);color:#fff;box-shadow:0 0 22px rgba(255,42,42,.55)}
+.btn.danger-btn:hover{background:#fff;color:var(--red)}
+
+/* ── SELECTION SCREENS ── */
+.sel-screen{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;align-items:center;z-index:900;overflow-y:auto;padding:20px 16px 30px}
+.sel-screen.show{display:flex}
+.sel-title{font-family:'Orbitron',monospace;font-size:clamp(16px,2.5vw,26px);color:var(--green);letter-spacing:3px;text-align:center;margin:18px 0 4px;text-shadow:0 0 14px rgba(57,255,20,.45)}
+.sel-sub{color:var(--amber);font-size:12px;letter-spacing:2px;margin-bottom:22px;text-align:center}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;max-width:860px;width:100%}
+.card{border:1px solid var(--border);padding:20px;cursor:pointer;background:var(--panel);position:relative;overflow:hidden;transition:border-color .25s,box-shadow .25s,transform .2s}
+.card::after{content:'';position:absolute;inset:0;background:var(--gfade);opacity:0;transition:opacity .25s}
+.card:hover{border-color:var(--green);box-shadow:0 0 24px rgba(57,255,20,.18);transform:translateY(-3px)}
+.card:hover::after{opacity:1}
+.card.safe-card:hover{border-color:var(--safe);box-shadow:0 0 24px rgba(0,212,255,.18)}
+.card.safe-card::after{background:rgba(0,212,255,.05)}
+.c-name{font-family:'Orbitron',monospace;font-size:15px;color:var(--green);letter-spacing:2px;margin-bottom:6px}
+.safe-card .c-name{color:var(--safe)}
+.c-loc{font-size:11px;color:var(--amber);margin-bottom:10px;letter-spacing:1px}
+.c-desc{font-size:12px;color:var(--text);line-height:1.75}
+.c-diff{margin-top:10px;font-size:11px;letter-spacing:1px}
+.diff-mod{color:#8bc34a}.diff-hard{color:var(--amber)}.diff-exp{color:var(--red)}
+.c-pros-cons{margin-top:10px;font-size:11px;line-height:1.7;color:#5a8a5a}
+.safe-card .c-pros-cons{color:#3a7a8a}
+
+/* ── GAME SCREEN ── */
+#game{position:fixed;inset:0;display:none}
+#game.show{display:block}
+#map{position:absolute;inset:0}
+
+/* ── TOP HUD ── */
+#top-hud{position:absolute;top:0;left:0;right:0;z-index:500;background:rgba(7,10,7,.93);border-bottom:2px solid var(--border);padding:7px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.hud-brand{font-family:'Bebas Neue',sans-serif;font-size:21px;color:var(--red);letter-spacing:3px;text-shadow:0 0 10px rgba(255,42,42,.6);white-space:nowrap}
+.hud-div{width:1px;height:28px;background:var(--border);flex-shrink:0}
+.supplies{display:flex;gap:14px;flex:1;min-width:200px}
+.sup{display:flex;flex-direction:column;gap:3px;min-width:75px}
+.sup-lbl{font-size:9px;color:var(--text);letter-spacing:2px;text-transform:uppercase}
+.sup-track{height:9px;background:#0a0f0a;border:1px solid var(--border);position:relative;overflow:hidden}
+.sup-fill{height:100%;transition:width .4s,background .4s}
+.sup-fill.food{background:#7cb341}
+.sup-fill.fuel{background:#fb8c00}
+.sup-fill.med{background:#29b6f6}
+.sup-fill.crit{background:var(--red)!important;animation:critbar .5s infinite alternate}
+@keyframes critbar{from{opacity:1}to{opacity:.35}}
+.sup-val{font-size:10px;color:var(--white)}
+.hud-stats{display:flex;gap:14px;align-items:center;flex-shrink:0}
+.hs{text-align:center}
+.hs-lbl{font-size:9px;color:var(--text);letter-spacing:1px;display:block}
+.hs-val{font-family:'Orbitron',monospace;font-size:17px;color:var(--green);display:block}
+.hs-val.warn{color:var(--amber)}.hs-val.crit{color:var(--red);animation:blink .5s infinite}
+.hud-status{font-size:11px;letter-spacing:2px;color:var(--amber);text-align:center}
+.hud-status.danger{color:var(--red);animation:blink .4s infinite}
+.hud-btns{display:flex;gap:8px;flex-shrink:0}
+.hud-btn{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--green);background:transparent;border:1px solid var(--border);padding:6px 10px;cursor:pointer;letter-spacing:1px;transition:all .2s;white-space:nowrap}
+.hud-btn:hover{border-color:var(--green);background:var(--gfade)}
+
+/* ── LOG ── */
+#log{position:absolute;bottom:0;left:0;width:320px;max-height:190px;background:rgba(7,10,7,.92);border-top:2px solid var(--border);border-right:2px solid var(--border);z-index:500;overflow-y:auto;padding:8px}
+#log-head{font-family:'Orbitron',monospace;font-size:9px;color:var(--green);letter-spacing:2px;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.log-msg{font-size:11px;line-height:1.6;padding:2px 0;border-bottom:1px solid rgba(29,61,29,.25);animation:fadein .3s}
+@keyframes fadein{from{opacity:0;transform:translateX(-8px)}to{opacity:1}}
+.log-msg.ok{color:var(--green)}.log-msg.bad{color:var(--red)}.log-msg.info{color:var(--amber)}.log-msg.norm{color:var(--text)}
+.log-day{color:var(--border)}
+
+/* ── RIGHT PANEL ── */
+#rpanel{position:absolute;right:0;top:56px;bottom:0;width:192px;background:rgba(7,10,7,.93);border-left:2px solid var(--border);z-index:500;padding:10px;display:flex;flex-direction:column;gap:10px;overflow-y:auto}
+.rp-sec{border:1px solid var(--border);padding:9px}
+.rp-head{font-family:'Orbitron',monospace;font-size:9px;color:var(--green);letter-spacing:2px;margin-bottom:7px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.rp-body{font-size:11px;color:var(--text);line-height:1.75}
+.rp-btn{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--green);background:transparent;border:1px solid var(--border);padding:7px 8px;cursor:pointer;width:100%;text-align:left;transition:all .2s;letter-spacing:1px;margin-top:5px}
+.rp-btn:hover{background:var(--gfade);border-color:var(--green)}
+.leg{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:11px}
+.leg-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.wicon{font-size:22px;text-align:center;margin:4px 0}
+
+/* ── TOAST ── */
+#toast{position:absolute;top:70px;left:50%;transform:translateX(-50%);background:rgba(7,10,7,.94);border:1px solid var(--amber);padding:11px 22px;z-index:600;font-size:12px;color:var(--amber);text-align:center;pointer-events:none;transition:opacity .5s;white-space:nowrap}
+
+/* ── RESULT ── */
+#result{position:fixed;inset:0;background:rgba(0,0,0,.93);display:none;align-items:center;justify-content:center;flex-direction:column;z-index:2000}
+#result.show{display:flex}
+.r-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(56px,11vw,130px);letter-spacing:5px}
+.r-title.win{color:var(--green);text-shadow:0 0 40px rgba(57,255,20,.7)}
+.r-title.lose{color:var(--red);text-shadow:0 0 40px rgba(255,42,42,.7)}
+.r-sub{font-family:'Orbitron',monospace;font-size:15px;margin:8px 0 26px;letter-spacing:3px;color:var(--white)}
+.r-stats{border:1px solid var(--border);padding:20px 36px;margin-bottom:28px;text-align:center;line-height:2.1;font-size:13px;color:var(--text)}
+.r-stats strong{color:var(--white);font-weight:normal}
+
+/* scrollbar */
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--gdim)}
+
+@media(max-width:560px){#rpanel{display:none}#log{width:100%}.supplies{gap:8px}}
+</style>
+</head>
+<body>
+
+<!-- ═══ INTRO ═══ -->
+<div id="intro">
+  <div class="i-bio"></div>
+  <div class="i-title">☣ Dead Zones</div>
+  <div class="i-sub">Zombie Escape USA</div>
+  <div class="i-brief">
+    <p>The outbreak spread faster than anyone predicted.<br>
+    Major cities fell within days. Roads clogged. Communications failed.</p>
+    <p style="margin-top:10px">You have a vehicle, limited supplies, and a map.<br>
+    You have <span>one chance</span> to reach a Safe Zone before the dead — and exhaustion — find you.</p>
+    <p style="margin-top:12px;color:var(--amber)">Use real U.S. geography to survive.<br>The best survivors think geographically.</p>
+  </div>
+  <button class="btn" onclick="showScreen('start-sel')">▶ Begin Mission</button>
+</div>
+
+<!-- ═══ START LOCATION ═══ -->
+<div class="sel-screen" id="start-sel">
+  <div class="sel-title">⚠ Choose Your Starting Location</div>
+  <div class="sel-sub">WHERE DID THE OUTBREAK FIND YOU?</div>
+  <div class="cards">
+    <div class="card" onclick="pickStart('raleigh')">
+      <div class="c-name">Raleigh, NC</div>
+      <div class="c-loc">📍 Research Triangle · East Coast</div>
+      <div class="c-desc">The outbreak hits while you're in the rapidly growing Research Triangle region. Suburban sprawl, river crossings, and jammed interstates make every direction dangerous.</div>
+      <div class="c-pros-cons">Routes: West to Appalachians · South through farmland · North toward Virginia</div>
+      <div class="c-diff diff-mod">⚠ MODERATE — Traffic bottlenecks · River crossings</div>
+    </div>
+    <div class="card" onclick="pickStart('dallas')">
+      <div class="c-name">Dallas, TX</div>
+      <div class="c-loc">📍 North Texas · Central USA</div>
+      <div class="c-desc">Wide open interstates — but fuel runs out fast across Texas distances. Heat waves drain food faster. Every supply stop is a calculated risk.</div>
+      <div class="c-pros-cons">Routes: West to New Mexico · North through Oklahoma · South to El Paso</div>
+      <div class="c-diff diff-hard">⚠ HARD — Fuel & long distances · Heat risk</div>
+    </div>
+    <div class="card" onclick="pickStart('losangeles')">
+      <div class="c-name">Los Angeles, CA</div>
+      <div class="c-loc">📍 Southern California · West Coast</div>
+      <div class="c-desc">Massive population density means zombie zones spread explosively. The mountains block escape routes. Desert crossings are brutal. Every decision matters.</div>
+      <div class="c-pros-cons">Routes: North along coast · Inland via I-15 · Desert crossing to Nevada</div>
+      <div class="c-diff diff-exp">⚠ EXPERT — Terrain & zombie density · Bottlenecks</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DESTINATION ═══ -->
+<div class="sel-screen" id="dest-sel">
+  <div class="sel-title">🛡 Choose Your Safe Zone</div>
+  <div class="sel-sub">PICK YOUR DESTINATION BEFORE YOU MOVE</div>
+  <div class="cards">
+    <div class="card safe-card" onclick="pickDest('denver')">
+      <div class="c-name">Denver Mountain Shelter</div>
+      <div class="c-loc">📍 Rocky Mountains · Colorado</div>
+      <div class="c-desc">A fortified shelter in the high Rockies. Cold altitude slows zombie movement. Natural terrain acts as a wall — but reaching it requires crossing difficult mountain passes.</div>
+      <div class="c-pros-cons">✓ Natural defenses, cold slows zombies<br>✗ Mountain terrain, snowstorms possible</div>
+    </div>
+    <div class="card safe-card" onclick="pickDest('greatlakes')">
+      <div class="c-name">Great Lakes Naval Base</div>
+      <div class="c-loc">📍 Northern Michigan · Lake Huron</div>
+      <div class="c-desc">A fortified lakeside evacuation center with organized military defenses. Survivors are converging here from multiple states. Water access makes it nearly siege-proof.</div>
+      <div class="c-pros-cons">✓ Water access, organized defenses<br>✗ Limited entry routes, bridge choke points</div>
+    </div>
+    <div class="card safe-card" onclick="pickDest('arizona')">
+      <div class="c-name">Desert Solar Station</div>
+      <div class="c-loc">📍 Southern Arizona · Remote Desert</div>
+      <div class="c-desc">A remote solar research facility with its own power grid. Almost no surrounding population means minimal zombie activity — but extreme heat and long gaps between supply stops make survival difficult.</div>
+      <div class="c-pros-cons">✓ Isolated, low zombie density<br>✗ Heat, dehydration, resource scarcity</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ GAME ═══ -->
+<div id="game">
+  <div id="map"></div>
+
+  <!-- TOP HUD -->
+  <div id="top-hud">
+    <div class="hud-brand">☣ Dead Zones</div>
+    <div class="hud-div"></div>
+    <div class="supplies">
+      <div class="sup">
+        <span class="sup-lbl">🍎 Food</span>
+        <div class="sup-track"><div class="sup-fill food" id="b-food" style="width:100%"></div></div>
+        <span class="sup-val" id="v-food">100</span>
+      </div>
+      <div class="sup">
+        <span class="sup-lbl">⛽ Fuel</span>
+        <div class="sup-track"><div class="sup-fill fuel" id="b-fuel" style="width:100%"></div></div>
+        <span class="sup-val" id="v-fuel">100</span>
+      </div>
+      <div class="sup">
+        <span class="sup-lbl">💊 Med</span>
+        <div class="sup-track"><div class="sup-fill med" id="b-med" style="width:100%"></div></div>
+        <span class="sup-val" id="v-med">100</span>
+      </div>
+    </div>
+    <div class="hud-div"></div>
+    <div class="hud-stats">
+      <div class="hs"><span class="hs-lbl">DAY</span><span class="hs-val" id="h-day">1</span></div>
+      <div class="hs"><span class="hs-lbl">MOVES LEFT</span><span class="hs-val" id="h-moves">30</span></div>
+    </div>
+    <div class="hud-div"></div>
+    <div>
+      <div class="hud-status" id="h-status">READY TO MOVE</div>
+      <div style="font-size:10px;color:var(--text);letter-spacing:1px;margin-top:2px" id="h-weather">☀️ Clear</div>
+    </div>
+    <div class="hud-btns">
+      <button class="hud-btn" onclick="panToPlayer()">📍 My Position</button>
+      <button class="hud-btn" onclick="panToSafeZone()">🛡 Safe Zone</button>
+      <button class="hud-btn" onclick="panToUSA()">🗺 Full Map</button>
+    </div>
+  </div>
+
+  <!-- MESSAGE LOG -->
+  <div id="log">
+    <div id="log-head">▸ Mission Log</div>
+    <div id="log-msgs"></div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="rpanel">
+    <div class="rp-sec">
+      <div class="rp-head">🎯 Mission</div>
+      <div class="rp-body" id="rp-mission">Reach the Safe Zone</div>
+    </div>
+    <div class="rp-sec">
+      <div class="rp-head">🌤 Weather</div>
+      <div class="wicon" id="rp-wicon">☀️</div>
+      <div class="rp-body" id="rp-wtext">Clear skies. Normal travel speed.</div>
+    </div>
+    <div class="rp-sec">
+      <div class="rp-head">⚠ Threat Status</div>
+      <div class="rp-body" id="rp-threat">Zone clear. Move fast.</div>
+    </div>
+    <div class="rp-sec">
+      <div class="rp-head">📖 Legend</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--red);box-shadow:0 0 5px var(--red)"></div>Zombie Zone</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--green)"></div>Your Position</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--safe)"></div>Safe Zone</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--amber)"></div>Supply Stop</div>
+      <div class="leg"><div class="leg-dot" style="background:#e91e63"></div>Mountain Zone</div>
+    </div>
+    <div class="rp-sec">
+      <div class="rp-head">📋 How to Play</div>
+      <div class="rp-body">
+        • <b style="color:var(--white)">Click the map</b> to move<br>
+        • Collect supply icons 🏪⛽💊<br>
+        • Stay out of red zones<br>
+        • Reach 🛡 Safe Zone to win<br>
+        • Mountains = more fuel<br>
+        • Zombie zones expand every 3 moves!
+      </div>
+    </div>
+    <div class="rp-sec">
+      <div class="rp-head">📐 Geography Facts</div>
+      <div class="rp-body" id="rp-geo">Use the map to study your route!</div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" style="opacity:0">Click the map to move your survivor!</div>
+</div>
+
+<!-- ═══ RESULT ═══ -->
+<div id="result">
+  <div class="r-title" id="r-title">SURVIVED</div>
+  <div class="r-sub" id="r-sub">Safe Zone Reached</div>
+  <div class="r-stats" id="r-stats"></div>
+  <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
+    <button class="btn" onclick="resetGame()">↺ Play Again</button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ══════════════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════════════
+const STARTS = {
+  raleigh:     { lat:35.7796, lng:-78.6382, name:'Raleigh, NC',     zoom:6 },
+  dallas:      { lat:32.7767, lng:-96.7970, name:'Dallas, TX',       zoom:6 },
+  losangeles:  { lat:34.0522, lng:-118.243, name:'Los Angeles, CA',  zoom:6 },
+};
+const SAFES = {
+  denver:      { lat:39.7392, lng:-104.990, name:'Denver Mountain Shelter',  hint:'In the Rocky Mountains of Colorado.' },
+  greatlakes:  { lat:45.60,   lng:-84.73,   name:'Great Lakes Naval Base',    hint:'On the northern shore of Lake Huron, Michigan.' },
+  arizona:     { lat:32.10,   lng:-111.0,   name:'Desert Solar Station',      hint:'In the remote Sonoran Desert of southern Arizona.' },
+};
+
+// Zombie outbreak epicenters (radius in meters, growth per turn)
+const ZOMCITIES = [
+  { lat:40.7128, lng:-74.006,  name:'New York',      r:175000, g:24000 },
+  { lat:34.0522, lng:-118.243, name:'Los Angeles',   r:160000, g:22000 },
+  { lat:41.8781, lng:-87.629,  name:'Chicago',       r:148000, g:20000 },
+  { lat:29.7604, lng:-95.369,  name:'Houston',       r:128000, g:17000 },
+  { lat:33.7490, lng:-84.388,  name:'Atlanta',       r:118000, g:16000 },
+  { lat:25.7617, lng:-80.191,  name:'Miami',         r:108000, g:14000 },
+  { lat:32.7767, lng:-96.797,  name:'Dallas',        r:118000, g:16000 },
+  { lat:35.7796, lng:-78.638,  name:'Raleigh',       r:85000,  g:12000 },
+  { lat:39.9526, lng:-75.165,  name:'Philadelphia',  r:98000,  g:13000 },
+  { lat:47.6062, lng:-122.332, name:'Seattle',       r:98000,  g:13000 },
+  { lat:42.3601, lng:-71.058,  name:'Boston',        r:88000,  g:12000 },
+  { lat:29.4241, lng:-98.493,  name:'San Antonio',   r:82000,  g:11000 },
+  { lat:32.7157, lng:-117.161, name:'San Diego',     r:80000,  g:10000 },
+  { lat:42.3314, lng:-83.045,  name:'Detroit',       r:98000,  g:13000 },
+  { lat:33.4484, lng:-112.074, name:'Phoenix',       r:88000,  g:12000 },
+  { lat:36.174,  lng:-86.767,  name:'Nashville',     r:68000,  g:9000  },
+  { lat:39.952,  lng:-82.998,  name:'Columbus',      r:72000,  g:10000 },
+  { lat:36.2104, lng:-81.674,  name:'Charlotte',     r:65000,  g:8500  },
+];
+
+// Supply stops
+const STOPS = [
+  { lat:36.163, lng:-86.781, type:'gas',   name:'Nashville Gas Depot',      food:0,  fuel:35, med:0  },
+  { lat:35.960, lng:-83.920, type:'med',   name:'Knoxville Pharmacy',       food:0,  fuel:0,  med:38 },
+  { lat:35.222, lng:-101.83, type:'gas',   name:'Amarillo Fuel Station',    food:5,  fuel:42, med:0  },
+  { lat:35.084, lng:-106.65, type:'store', name:'Albuquerque Warehouse',    food:28, fuel:18, med:12 },
+  { lat:40.760, lng:-111.89, type:'gas',   name:'Salt Lake City Fuel Stop', food:5,  fuel:38, med:5  },
+  { lat:39.099, lng:-94.578, type:'store', name:'Kansas City Grocery',      food:32, fuel:0,  med:5  },
+  { lat:38.627, lng:-90.199, type:'gas',   name:'St. Louis Fuel Stop',      food:0,  fuel:32, med:0  },
+  { lat:38.252, lng:-85.758, type:'med',   name:'Louisville Medical Cache', food:5,  fuel:0,  med:32 },
+  { lat:31.761, lng:-106.48, type:'store', name:'El Paso Supply Cache',     food:22, fuel:22, med:15 },
+  { lat:35.198, lng:-111.65, type:'gas',   name:'Flagstaff Fuel Station',   food:0,  fuel:38, med:0  },
+  { lat:36.169, lng:-115.13, type:'store', name:'Las Vegas Warehouse',      food:38, fuel:28, med:22 },
+  { lat:38.581, lng:-121.49, type:'store', name:'Sacramento Supply Depot',  food:28, fuel:22, med:12 },
+  { lat:36.778, lng:-119.41, type:'gas',   name:'Fresno Fuel Station',      food:5,  fuel:38, med:0  },
+  { lat:35.687, lng:-105.93, type:'store', name:'Santa Fe Supply Cache',    food:22, fuel:16, med:12 },
+  { lat:43.615, lng:-116.20, type:'store', name:'Boise Warehouse',          food:28, fuel:22, med:12 },
+  { lat:37.687, lng:-97.330, type:'gas',   name:'Wichita Fuel Stop',        food:0,  fuel:32, med:0  },
+  { lat:35.467, lng:-97.516, type:'store', name:'Oklahoma City Depot',      food:26, fuel:22, med:10 },
+  { lat:37.271, lng:-79.941, type:'gas',   name:'Roanoke Fuel Stop',        food:0,  fuel:28, med:5  },
+  { lat:44.977, lng:-93.265, type:'store', name:'Minneapolis Warehouse',    food:32, fuel:22, med:15 },
+  { lat:46.872, lng:-96.789, type:'store', name:'Fargo Supply Depot',       food:32, fuel:18, med:10 },
+  { lat:39.550, lng:-105.78, type:'store', name:'Conifer Mountain Cache',   food:18, fuel:22, med:8  },
+  { lat:38.840, lng:-104.82, type:'med',   name:'Colorado Springs Clinic',  food:5,  fuel:5,  med:35 },
+  { lat:44.059, lng:-103.22, type:'gas',   name:'Rapid City Fuel Station',  food:5,  fuel:38, med:0  },
+  { lat:46.595, lng:-112.02, type:'store', name:'Helena Montana Cache',     food:24, fuel:20, med:10 },
+  { lat:36.852, lng:-75.978, type:'store', name:'Virginia Beach Cache',     food:22, fuel:12, med:15 },
+];
+
+// Mountain zones (approx bounding boxes for gameplay)
+const MTN_ZONES = [
+  { lat1:34,lng1:-85,  lat2:42, lng2:-76  }, // Appalachians
+  { lat1:36,lng1:-117, lat2:49, lng2:-102 }, // Rockies / Great Basin
+  { lat1:35,lng1:-123, lat2:42, lng2:-119 }, // Sierra Nevada / Cascades
+];
+
+// Weather table
+const WEATHERS = [
+  { id:'clear',  icon:'☀️',  label:'Clear',         desc:'Normal travel speed.',           fuelX:1.0, speedX:1.0, foodX:1.0 },
+  { id:'rain',   icon:'🌧️', label:'Heavy Rain',     desc:'Slippery roads. Travel slower.',  fuelX:1.2, speedX:.80,  foodX:1.1 },
+  { id:'snow',   icon:'❄️',  label:'Snowstorm',      desc:'Blizzard! Fuel burns fast.',      fuelX:1.6, speedX:.55,  foodX:1.0 },
+  { id:'heat',   icon:'🌡️', label:'Heat Wave',      desc:'Food spoils faster. Stay hydrated.',fuelX:1.1,speedX:.90, foodX:1.5 },
+  { id:'fog',    icon:'🌫️', label:'Dense Fog',      desc:'Low visibility. Drive carefully.', fuelX:1.0, speedX:.70,  foodX:1.0 },
+  { id:'storm',  icon:'⛈️',  label:'Thunderstorm',  desc:'Stay off open roads!',             fuelX:1.4, speedX:.65,  foodX:1.1 },
+];
+
+// Geography facts triggered by region
+const GEO_FACTS = [
+  { minLng:-125,maxLng:-115, minLat:32,maxLat:42, fact:'The Sierra Nevada creates a rain shadow, making the land east of it very dry.' },
+  { minLng:-115,maxLng:-104, minLat:36,maxLat:49, fact:'The Rocky Mountains form the Continental Divide — rivers flow either to the Pacific or Atlantic from here.' },
+  { minLng:-104,maxLng:-96,  minLat:30,maxLat:49, fact:'The Great Plains stretch flat for hundreds of miles, making travel fast but exposed.' },
+  { minLng:-96, maxLng:-85,  minLat:25,maxLat:37, fact:'The Gulf Coast region has high humidity and hurricane risk in late summer.' },
+  { minLng:-85, maxLng:-75,  minLat:34,maxLat:42, fact:'The Appalachian Mountains are some of the oldest in North America, worn smooth by millions of years of erosion.' },
+  { minLng:-90, maxLng:-75,  minLat:41,maxLat:50, fact:'The Great Lakes hold 21% of the world\'s fresh surface water.' },
+  { minLng:-112,maxLng:-109, minLat:31,maxLat:37, fact:'The Sonoran Desert receives less than 10 inches of rain per year.' },
+];
+
+// ══════════════════════════════════════════════════
+// GAME STATE
+// ══════════════════════════════════════════════════
+const G = {
+  turn:0, maxTurns:30,
+  food:100, fuel:100, med:100,
+  pos:null, startId:null, destId:null,
+  weather:'clear',
+  map:null, playerMark:null, safeMark:null,
+  zomCircles:[], zomR:[],
+  supMarkers:[], collected:new Set(),
+  trail:[], trailLine:null,
+  over:false,
+};
+
+// ══════════════════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════════════════
+function haversine(a,b,c,d){
+  const R=6371, dL=(c-a)*Math.PI/180, dN=(d-b)*Math.PI/180;
+  const x=Math.sin(dL/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dN/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+function inMountains(lat,lng){
+  return MTN_ZONES.some(z=>lat>=z.lat1&&lat<=z.lat2&&lng>=z.lng1&&lng<=z.lng2);
+}
+function inZomZone(lat,lng){
+  return ZOMCITIES.some((z,i)=>haversine(lat,lng,z.lat,z.lng)*1000<G.zomR[i]);
+}
+function currentWeather(){ return WEATHERS.find(w=>w.id===G.weather)||WEATHERS[0]; }
+
+function addLog(msg,cls='norm'){
+  const el=document.createElement('div');
+  el.className=`log-msg ${cls}`;
+  el.innerHTML=`<span class="log-day">[Day ${G.turn}]</span> ${msg}`;
+  const c=document.getElementById('log-msgs');
+  c.insertBefore(el,c.firstChild);
+  while(c.children.length>24)c.removeChild(c.lastChild);
+}
+
+function toast(msg,dur=3500){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.style.opacity='1';
+  clearTimeout(t._timer);
+  t._timer=setTimeout(()=>t.style.opacity='0',dur);
+}
+
+// ══════════════════════════════════════════════════
+// SCREENS
+// ══════════════════════════════════════════════════
+function showScreen(id){
+  ['intro','start-sel','dest-sel','game','result'].forEach(s=>{
+    const el=document.getElementById(s);
+    if(!el)return;
+    if(s===id){
+      if(el.classList.contains('sel-screen'))el.classList.add('show');
+      else{el.style.display='';if(el.id==='result')el.classList.add('show');if(el.id==='game')el.classList.add('show');}
+    } else {
+      if(el.classList.contains('sel-screen'))el.classList.remove('show');
+      else el.style.display='none';
+    }
+  });
+}
+
+function pickStart(id){
+  G.startId=id;
+  // Remove start city from zombie list for first 2 turns of challenge
+  showScreen('dest-sel');
+}
+function pickDest(id){
+  G.destId=id;
+  showScreen('game');
+  initGame();
+}
+
+// ══════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════
+function initGame(){
+  G.turn=1; G.food=100; G.fuel=100; G.med=100;
+  G.weather='clear'; G.over=false; G.collected=new Set();
+  G.trail=[]; G.zomCircles=[]; G.supMarkers=[];
+  G.zomR=ZOMCITIES.map(z=>z.r);
+
+  const S=STARTS[G.startId], D=SAFES[G.destId];
+  G.pos={lat:S.lat,lng:S.lng};
+
+  if(G.map){G.map.remove();G.map=null;}
+
+  G.map=L.map('map',{
+    center:[38,-96],zoom:4,
+    zoomControl:true,
+    maxBounds:[[15,-135],[60,-55]],
+    maxBoundsViscosity:0.9,
+  });
+
+  // ArcGIS REST API — Dark Gray Canvas basemap
+  L.tileLayer(
+    'https://server.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    {attribution:'Map: <a href="https://www.esri.com">Esri</a> ArcGIS REST API | Dead Zones Game',maxZoom:16}
+  ).addTo(G.map);
+
+  // ArcGIS REST API — Dark Gray Reference Labels
+  L.tileLayer(
+    'https://server.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+    {attribution:'',maxZoom:16,opacity:.85,pane:'overlayPane'}
+  ).addTo(G.map);
+
+  buildZombieZones();
+  buildSupplyStops();
+  placePlayerMark(S.lat,S.lng);
+  placeSafeMark(D);
+
+  G.map.on('click',onMapClick);
+
+  document.getElementById('rp-mission').textContent='Reach: '+D.name;
+  document.getElementById('rp-geo').textContent=D.hint;
+
+  updateHUD();
+  addLog('☣ Mission started from '+S.name,'ok');
+  addLog('Destination: '+D.name,'info');
+  addLog('Click any location on the map to move your survivor.','norm');
+  addLog('Yellow icons = supplies. Blue shield = Safe Zone.','norm');
+
+  toast('Click the map to move! Avoid the red zombie zones!',5000);
+
+  setTimeout(()=>G.map.setView([S.lat,S.lng],S.zoom,{animate:true}),400);
+}
+
+// ══════════════════════════════════════════════════
+// MAP LAYERS
+// ══════════════════════════════════════════════════
+function buildZombieZones(){
+  G.zomCircles=[];
+  ZOMCITIES.forEach((z,i)=>{
+    // Skip the starting city's zone for balance
+    let r=G.zomR[i];
+    if(G.startId==='raleigh'&&z.name==='Raleigh')r=40000;
+    if(G.startId==='dallas'&&z.name==='Dallas')r=50000;
+    if(G.startId==='losangeles'&&z.name==='Los Angeles')r=60000;
+    G.zomR[i]=r;
+
+    const c=L.circle([z.lat,z.lng],{
+      radius:r,color:'#ff2a2a',fillColor:'#aa0000',
+      fillOpacity:.28,weight:1.5,opacity:.9,
+    }).addTo(G.map);
+    c.bindPopup(`<div style="background:#0c0f0c;color:#ff2a2a;font-family:'Share Tech Mono',monospace;padding:8px;border:1px solid #ff2a2a;font-size:12px">
+      <b>☣ ZOMBIE ZONE</b><br>${z.name}<br>
+      <span style="color:#7abf7a">Radius: ${Math.round(r/1000)} km · Spreading!</span>
+    </div>`);
+    G.zomCircles.push(c);
+  });
+}
+
+function expandZomZones(){
+  ZOMCITIES.forEach((z,i)=>{
+    G.zomR[i]+=z.g;
+    G.zomCircles[i].setRadius(G.zomR[i]);
+  });
+}
+
+function buildSupplyStops(){
+  G.supMarkers=[];
+  const icons={gas:'⛽',med:'💊',store:'🏪'};
+  STOPS.forEach((s,i)=>{
+    const ico=L.divIcon({
+      html:`<div style="font-size:20px;filter:drop-shadow(0 0 4px #ffb600);cursor:pointer;line-height:1">${icons[s.type]||'🏪'}</div>`,
+      iconSize:[24,24],iconAnchor:[12,12],className:'',
+    });
+    const m=L.marker([s.lat,s.lng],{icon:ico}).addTo(G.map);
+    const lines=[
+      s.food>0?`🍎 Food +${s.food}`:'',
+      s.fuel>0?`⛽ Fuel +${s.fuel}`:'',
+      s.med >0?`💊 Medicine +${s.med}`:'',
+    ].filter(Boolean).join('<br>');
+    m.bindPopup(`<div style="background:#0c110c;color:#cce8cc;font-family:'Share Tech Mono',monospace;padding:9px;border:1px solid #1d3d1d;font-size:12px;min-width:160px">
+      <b style="color:#ffb600">${icons[s.type]} ${s.name}</b><br>${lines}<br>
+      <span style="color:#39ff14;font-size:11px">Move near this icon to collect!</span>
+    </div>`);
+    G.supMarkers.push({m,s,i,done:false});
+  });
+}
+
+function placePlayerMark(lat,lng){
+  if(G.playerMark)G.map.removeLayer(G.playerMark);
+  const ico=L.divIcon({
+    html:`<div style="width:18px;height:18px;background:var(--green,#39ff14);border-radius:50%;border:2.5px solid #fff;box-shadow:0 0 10px #39ff14,0 0 22px rgba(57,255,20,.5)"></div>`,
+    iconSize:[18,18],iconAnchor:[9,9],className:'',
+  });
+  G.playerMark=L.marker([lat,lng],{icon:ico,zIndexOffset:1000}).addTo(G.map);
+  G.playerMark.bindPopup(`<div style="background:#0c110c;color:#39ff14;font-family:'Share Tech Mono',monospace;padding:8px;border:1px solid #39ff14;font-size:12px">
+    🧍 <b>YOU ARE HERE</b><br>
+    <span style="color:#cce8cc">Lat: ${lat.toFixed(3)} | Lng: ${lng.toFixed(3)}</span>
+  </div>`);
+
+  G.trail.push([lat,lng]);
+  if(G.trailLine)G.map.removeLayer(G.trailLine);
+  if(G.trail.length>1){
+    G.trailLine=L.polyline(G.trail,{color:'#39ff14',weight:2,opacity:.4,dashArray:'5,9'}).addTo(G.map);
+  }
+}
+
+function placeSafeMark(D){
+  if(G.safeMark)G.map.removeLayer(G.safeMark);
+  const ico=L.divIcon({
+    html:`<div style="text-align:center">
+      <div style="font-size:26px;filter:drop-shadow(0 0 6px #00d4ff)">🛡</div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:#00d4ff;text-shadow:0 0 4px #00d4ff;white-space:nowrap;margin-top:-2px">SAFE ZONE</div>
+    </div>`,
+    iconSize:[70,42],iconAnchor:[35,38],className:'',
+  });
+  G.safeMark=L.marker([D.lat,D.lng],{icon:ico,zIndexOffset:900}).addTo(G.map);
+  G.safeMark.bindPopup(`<div style="background:#07100f;color:#00d4ff;font-family:'Share Tech Mono',monospace;padding:9px;border:1px solid #00d4ff;font-size:12px">
+    🛡 <b>${D.name}</b><br><span style="color:#cce8cc">YOUR DESTINATION</span>
+  </div>`);
+}
+
+// ══════════════════════════════════════════════════
+// MOVEMENT
+// ══════════════════════════════════════════════════
+function onMapClick(e){
+  if(G.over)return;
+  const {lat,lng}=e.latlng;
+  const W=currentWeather();
+
+  // Distance
+  const distKm=haversine(G.pos.lat,G.pos.lng,lat,lng);
+
+  // Range limit
+  let maxKm=480*W.speedX;
+  if(G.fuel<30)maxKm*=.6;
+  if(G.fuel<15)maxKm*=.4;
+
+  if(distKm>maxKm){
+    toast(`⚠ Too far! Max range now: ${Math.round(maxKm)} km. Click closer.`);
+    addLog(`⚠ Out of range (${Math.round(distKm)} km). Move closer.`,'bad');
+    return;
+  }
+
+  // Fuel cost
+  let fuelCost=(distKm/480)*22;
+  const mtn=inMountains(lat,lng)||inMountains(G.pos.lat,G.pos.lng);
+  if(mtn){fuelCost*=1.9;}
+  fuelCost*=W.fuelX;
+  fuelCost=Math.max(2,Math.round(fuelCost));
+
+  if(G.fuel<fuelCost){
+    addLog(`⛽ Not enough fuel! Need ${fuelCost}%, have ${Math.round(G.fuel)}%.`,'bad');
+    toast('Out of fuel for that distance. Move closer or find fuel.');
+    return;
+  }
+
+  // --- MOVE ---
+  G.pos={lat,lng};
+  G.fuel=Math.max(0,G.fuel-fuelCost);
+
+  // Food cost
+  let foodCost=Math.round(7*W.foodX);
+  G.food=Math.max(0,G.food-foodCost);
+
+  G.turn++;
+  let msg=`Moved ${Math.round(distKm)} km`;
+  if(mtn)msg+=' through mountains 🏔️';
+  msg+=`. Fuel -${fuelCost}%, Food -${foodCost}%`;
+  addLog(msg,'norm');
+
+  if(mtn)addLog('⛰️ Mountain terrain — high fuel burn!','info');
+
+  placePlayerMark(lat,lng);
+
+  // Collect supplies
+  collectNearby(lat,lng);
+
+  // Zombie zone check
+  doZomCheck(lat,lng);
+
+  // Expand every 3 turns
+  if(G.turn%3===0){
+    expandZomZones();
+    addLog('⚠️ Zombie zones expanding — the infected are spreading!','bad');
+  }
+
+  // Weather change
+  if(G.turn%5===0)changeWeather();
+
+  // Geography fact
+  showGeoFact(lat,lng);
+
+  // HUD update
+  updateHUD();
+
+  // Win check
+  const D=SAFES[G.destId];
+  if(haversine(lat,lng,D.lat,D.lng)<90){doWin();return;}
+
+  // Lose checks
+  if(G.fuel<=0){doLose('Out of fuel! Your vehicle stopped in the middle of nowhere.');return;}
+  if(G.food<=0){doLose('You ran out of food and collapsed from exhaustion.');return;}
+  if(G.med<=0&&inZomZone(lat,lng)){doLose('Caught in a zombie zone with no medicine. You didn\'t survive.');return;}
+  if(G.turn>G.maxTurns){doLose('Time ran out. The zombie zones caught up with you everywhere.');return;}
+}
+
+// ══════════════════════════════════════════════════
+// SUPPLY COLLECTION
+// ══════════════════════════════════════════════════
+function collectNearby(lat,lng){
+  G.supMarkers.forEach(({m,s,i,done})=>{
+    if(G.collected.has(i))return;
+    if(haversine(lat,lng,s.lat,s.lng)>65)return;
+    G.collected.add(i);
+    G.food=Math.min(100,G.food+s.food);
+    G.fuel=Math.min(100,G.fuel+s.fuel);
+    G.med =Math.min(100,G.med +s.med);
+    const parts=[s.food>0?`🍎+${s.food}`:'',s.fuel>0?`⛽+${s.fuel}`:'',s.med>0?`💊+${s.med}`:''].filter(Boolean).join(' ');
+    addLog(`📦 Collected: ${s.name}! ${parts}`,'ok');
+    toast(`Supplies collected at ${s.name}!`,3000);
+    // Grey it out
+    const gi=L.divIcon({html:`<div style="font-size:16px;opacity:.25">✓</div>`,iconSize:[20,20],iconAnchor:[10,10],className:''});
+    m.setIcon(gi);
+  });
+}
+
+// ══════════════════════════════════════════════════
+// ZOMBIE ZONE CHECK
+// ══════════════════════════════════════════════════
+function doZomCheck(lat,lng){
+  let inside=false, closestCity='';
+  let nearWarning=false;
+  let warningCity='', warningBuffer=9999;
+
+  ZOMCITIES.forEach((z,i)=>{
+    const dist=haversine(lat,lng,z.lat,z.lng);
+    const rKm=G.zomR[i]/1000;
+    if(dist<rKm){inside=true;closestCity=z.name;}
+    else if(dist<rKm*1.25){
+      const buf=dist-rKm;
+      if(buf<warningBuffer){nearWarning=true;warningCity=z.name;warningBuffer=buf;}
+    }
+  });
+
+  const st=document.getElementById('h-status');
+  const rp=document.getElementById('rp-threat');
+
+  if(inside){
+    G.med=Math.max(0,G.med-22);
+    st.textContent='⚠️ DANGER ZONE';st.className='hud-status danger';
+    addLog(`☣ IN ZOMBIE ZONE near ${closestCity}! Medicine used! ESCAPE NOW!`,'bad');
+    toast('☣ INSIDE A ZOMBIE ZONE! Get out immediately!');
+    rp.textContent=`IN ZONE: ${closestCity} — flee now!`;
+    if(G.med<=0){doLose(`Overrun by zombies near ${closestCity}. No medicine left.`);return;}
+  } else {
+    st.textContent='CLEAR';st.className='hud-status';
+    if(nearWarning){
+      addLog(`⚠ ${warningCity} zone edge: ${Math.round(warningBuffer)} km buffer. Watch out!`,'bad');
+      rp.textContent=`Warning: ${warningCity} zone ~${Math.round(warningBuffer)} km away`;
+    } else {
+      rp.textContent='Zone clear. Keep moving.';
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════
+// WEATHER
+// ══════════════════════════════════════════════════
+function changeWeather(){
+  const roll=Math.random();
+  let w;
+  if(roll<.32)w=WEATHERS[0];
+  else if(roll<.48)w=WEATHERS[1];
+  else if(roll<.59)w=WEATHERS[2];
+  else if(roll<.70)w=WEATHERS[3];
+  else if(roll<.83)w=WEATHERS[4];
+  else w=WEATHERS[5];
+  G.weather=w.id;
+  document.getElementById('rp-wicon').textContent=w.icon;
+  document.getElementById('rp-wtext').textContent=w.desc;
+  document.getElementById('h-weather').textContent=w.icon+' '+w.label;
+  addLog(`🌤 Weather: ${w.label} — ${w.desc}`,'info');
+  toast(`Weather change: ${w.label}! ${w.desc}`,3500);
+}
+
+// ══════════════════════════════════════════════════
+// GEOGRAPHY FACT
+// ══════════════════════════════════════════════════
+function showGeoFact(lat,lng){
+  const f=GEO_FACTS.find(f=>lat>=f.minLat&&lat<=f.maxLat&&lng>=f.minLng&&lng<=f.maxLng);
+  if(f){
+    document.getElementById('rp-geo').textContent='📚 '+f.fact;
+  }
+}
+
+// ══════════════════════════════════════════════════
+// HUD UPDATE
+// ══════════════════════════════════════════════════
+function updateHUD(){
+  const {food,fuel,med,turn,maxTurns}=G;
+  const left=maxTurns-turn+1;
+
+  // Bars
+  document.getElementById('b-food').style.width=food+'%';
+  document.getElementById('b-fuel').style.width=fuel+'%';
+  document.getElementById('b-med').style.width=med+'%';
+  document.getElementById('v-food').textContent=Math.round(food);
+  document.getElementById('v-fuel').textContent=Math.round(fuel);
+  document.getElementById('v-med').textContent=Math.round(med);
+
+  // Critical styling
+  ['food','fuel','med'].forEach(k=>{
+    const val=k==='med'?med:(k==='fuel'?fuel:food);
+    const bar=document.getElementById('b-'+k);
+    bar.classList.toggle('crit',val<20);
+  });
+
+  // Stats
+  document.getElementById('h-day').textContent=turn;
+  const mv=document.getElementById('h-moves');
+  mv.textContent=left;
+  mv.className='hs-val'+(left<=5?' crit':left<=10?' warn':'');
+
+  // Weather
+  const W=currentWeather();
+  document.getElementById('h-weather').textContent=W.icon+' '+W.label;
+}
+
+// ══════════════════════════════════════════════════
+// WIN / LOSE
+// ══════════════════════════════════════════════════
+function doWin(){
+  G.over=true;
+  const S=STARTS[G.startId],D=SAFES[G.destId];
+  document.getElementById('r-title').textContent='✓ SURVIVED';
+  document.getElementById('r-title').className='r-title win';
+  document.getElementById('r-sub').textContent=D.name+' reached!';
+  document.getElementById('r-stats').innerHTML=`
+    <b style="color:#39ff14;font-family:'Orbitron',monospace;font-size:11px;letter-spacing:2px">MISSION COMPLETE</b><br><br>
+    Starting Location: <strong>${S.name}</strong><br>
+    Safe Zone: <strong>${D.name}</strong><br>
+    Days of Travel: <strong>${G.turn}</strong><br>
+    Food Remaining: <strong>${Math.round(G.food)}%</strong><br>
+    Fuel Remaining: <strong>${Math.round(G.fuel)}%</strong><br>
+    Medicine Remaining: <strong>${Math.round(G.med)}%</strong><br>
+    Supply Stops Found: <strong>${G.collected.size} of ${STOPS.length}</strong>
+  `;
+  document.getElementById('result').classList.add('show');
+  addLog('🛡 SAFE ZONE REACHED — MISSION COMPLETE!','ok');
+}
+
+function doLose(reason){
+  G.over=true;updateHUD();
+  const S=STARTS[G.startId],D=SAFES[G.destId];
+  document.getElementById('r-title').textContent='☣ INFECTED';
+  document.getElementById('r-title').className='r-title lose';
+  document.getElementById('r-sub').textContent=reason;
+  document.getElementById('r-stats').innerHTML=`
+    <b style="color:#ff2a2a;font-family:'Orbitron',monospace;font-size:11px;letter-spacing:2px">MISSION FAILED</b><br><br>
+    Starting Location: <strong>${S.name}</strong><br>
+    Destination: <strong>${D.name}</strong><br>
+    Days Survived: <strong>${G.turn}</strong><br>
+    Food at End: <strong>${Math.round(G.food)}%</strong><br>
+    Fuel at End: <strong>${Math.round(G.fuel)}%</strong><br>
+    Medicine at End: <strong>${Math.round(G.med)}%</strong><br>
+    Supply Stops Found: <strong>${G.collected.size} of ${STOPS.length}</strong><br><br>
+    <span style="color:#ffb600">Tip: Study the map before moving. Find supply stops<br>along your route. Watch zombie zone expansion!</span>
+  `;
+  document.getElementById('result').classList.add('show');
+}
+
+// ══════════════════════════════════════════════════
+// NAVIGATION HELPERS
+// ══════════════════════════════════════════════════
+function panToPlayer(){ if(G.map&&G.pos)G.map.setView([G.pos.lat,G.pos.lng],7,{animate:true}); }
+function panToSafeZone(){
+  if(!G.map||!G.destId)return;
+  const D=SAFES[G.destId];
+  G.map.setView([D.lat,D.lng],7,{animate:true});
+}
+function panToUSA(){ if(G.map)G.map.setView([38,-96],4,{animate:true}); }
+
+// ══════════════════════════════════════════════════
+// RESET
+// ══════════════════════════════════════════════════
+function resetGame(){
+  document.getElementById('result').classList.remove('show');
+  document.getElementById('game').classList.remove('show');
+  G.startId=null;G.destId=null;G.over=false;
+  // Clear log
+  document.getElementById('log-msgs').innerHTML='';
+  showScreen('start-sel');
+}
+
+// Start on intro
+document.getElementById('intro').style.display='flex';
+</script>
+</body>
+</html>
