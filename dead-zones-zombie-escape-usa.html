@@ -254,6 +254,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     <div class="hud-div"></div>
     <div class="hud-stats">
       <div class="hs"><span class="hs-lbl">DAY</span><span class="hs-val" id="h-day">1</span></div>
+      <div class="hs"><span class="hs-lbl">NEXT DAY</span><span class="hs-val" id="h-countdown" style="font-size:13px;color:var(--amber)">3:00</span></div>
       <div class="hs"><span class="hs-lbl">MOVES LEFT</span><span class="hs-val" id="h-moves">30</span></div>
     </div>
     <div class="hud-div"></div>
@@ -441,6 +442,7 @@ const G = {
   supMarkers:[], collected:new Set(),
   trail:[], trailLine:null,
   over:false,
+  dayTimer:null, tickTimer:null, tickSecsLeft:180,
 };
 
 // ══════════════════════════════════════════════════
@@ -473,6 +475,53 @@ function toast(msg,dur=3500){
   t.textContent=msg; t.style.opacity='1';
   clearTimeout(t._timer);
   t._timer=setTimeout(()=>t.style.opacity='0',dur);
+}
+
+// ══════════════════════════════════════════════════
+// REAL-TIME DAY TIMER
+// ══════════════════════════════════════════════════
+function tickCountdown(){
+  if(G.over)return;
+  G.tickSecsLeft--;
+  const m=Math.floor(G.tickSecsLeft/60);
+  const s=G.tickSecsLeft%60;
+  const cd=document.getElementById('h-countdown');
+  if(cd) cd.textContent=`${m}:${String(s).padStart(2,'0')}`;
+}
+
+function realTimeDayTick(){
+  if(G.over)return;
+  G.turn++;
+  G.tickSecsLeft=180;
+
+  const W=currentWeather();
+
+  // Food drain (same rate as a move)
+  const foodCost=Math.round(7*W.foodX);
+  G.food=Math.max(0,G.food-foodCost);
+
+  // Medicine drain (2 per day)
+  G.med=Math.max(0,G.med-2);
+
+  addLog(`⏱ Time passes — Day ${G.turn} begins. Food -${foodCost}%, Med -2%`,'info');
+
+  // Zombie zone expansion every 3 turns
+  if(G.turn%3===0){
+    expandZomZones();
+    addLog('⚠️ Zombie zones expanding — the infected are spreading!','bad');
+  }
+
+  // Weather change every 5 turns
+  if(G.turn%5===0) changeWeather();
+
+  updateHUD();
+
+  // Lose checks
+  if(G.food<=0){doLose('You ran out of food while waiting. Keep moving!');return;}
+  if(G.med<=0&&G.pos&&inZomZone(G.pos.lat,G.pos.lng)){
+    doLose('Caught in a zombie zone with no medicine left.');return;
+  }
+  if(G.turn>G.maxTurns){doLose('Time ran out. The zombie zones consumed everything.');return;}
 }
 
 // ══════════════════════════════════════════════════
@@ -559,6 +608,13 @@ function initGame(){
   toast('Click the map to move! Avoid the red zombie zones!',5000);
 
   setTimeout(()=>G.map.setView([S.lat,S.lng],S.zoom,{animate:true}),400);
+
+  // Real-time timers
+  G.tickSecsLeft=180;
+  clearInterval(G.dayTimer);
+  clearInterval(G.tickTimer);
+  G.dayTimer=setInterval(realTimeDayTick, 180000); // every 3 minutes
+  G.tickTimer=setInterval(tickCountdown,  1000);   // every second
 }
 
 // ══════════════════════════════════════════════════
@@ -1003,6 +1059,8 @@ function updateHUD(){
 // ══════════════════════════════════════════════════
 function doWin(reached){
   G.over=true;
+  clearInterval(G.dayTimer);
+  clearInterval(G.tickTimer);
   const S=STARTS[G.startId];
   const D=reached||SAFES[G.destId];
   document.getElementById('r-title').textContent='✓ SURVIVED';
@@ -1024,15 +1082,19 @@ function doWin(reached){
 }
 
 function doLose(reason){
-  G.over=true;updateHUD();
-  const S=STARTS[G.startId],D=SAFES[G.destId];
+  G.over=true;
+  clearInterval(G.dayTimer);
+  clearInterval(G.tickTimer);
+  updateHUD();
+  const S=STARTS[G.startId];
+  const D=G.destId?SAFES[G.destId]:null;
   document.getElementById('r-title').textContent='☣ INFECTED';
   document.getElementById('r-title').className='r-title lose';
   document.getElementById('r-sub').textContent=reason;
   document.getElementById('r-stats').innerHTML=`
     <b style="color:#ff2a2a;font-family:'Orbitron',monospace;font-size:11px;letter-spacing:2px">MISSION FAILED</b><br><br>
     Starting Location: <strong>${S.name}</strong><br>
-    Destination: <strong>${D.name}</strong><br>
+    Destination: <strong>${D?D.name:'Open — any Safe Zone'}</strong><br>
     Days Survived: <strong>${G.turn}</strong><br>
     Food at End: <strong>${Math.round(G.food)}%</strong><br>
     Fuel at End: <strong>${Math.round(G.fuel)}%</strong><br>
@@ -1067,7 +1129,10 @@ function giveUp(){
 // RESET
 // ══════════════════════════════════════════════════
 function resetGame(){
+  clearInterval(G.dayTimer);
+  clearInterval(G.tickTimer);
   document.getElementById('result').classList.remove('show');
+  document.getElementById('result').style.display='none';
   document.getElementById('game').classList.remove('show');
   G.startId=null;G.destId=null;G.over=false;
   // Clear log
