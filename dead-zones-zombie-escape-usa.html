@@ -335,6 +335,7 @@ const ZOMCITIES = [
   { lat:32.7157, lng:-117.161, name:'San Diego',     r:80000,  g:10000 },
   { lat:42.3314, lng:-83.045,  name:'Detroit',       r:98000,  g:13000 },
   { lat:33.4484, lng:-112.074, name:'Phoenix',       r:88000,  g:12000 },
+  { lat:34.056,  lng:-117.182, name:'Redlands, CA',   r:55000,  g:8000  },
   { lat:36.174,  lng:-86.767,  name:'Nashville',     r:68000,  g:9000  },
   { lat:39.952,  lng:-82.998,  name:'Columbus',      r:72000,  g:10000 },
   { lat:36.2104, lng:-81.674,  name:'Charlotte',     r:65000,  g:8500  },
@@ -617,6 +618,50 @@ function placeSafeMark(D){
 // ══════════════════════════════════════════════════
 // MOVEMENT
 // ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
+// LARGE WATER BODIES (no-cross zones — rivers allowed)
+// Each is a simple bounding polygon [lat,lng] pairs
+// ══════════════════════════════════════════════════
+const WATER_BODIES = [
+  { name:'Atlantic Ocean',     poly:[[24,-82],[24,-65],[50,-55],[50,-65],[47,-53],[45,-60],[25,-75]] },
+  { name:'Pacific Ocean',      poly:[[24,-125],[32,-117],[35,-121],[40,-124],[48,-124],[50,-130],[24,-140]] },
+  { name:'Gulf of Mexico',     poly:[[25,-97],[25,-81],[30,-81],[30,-88],[29,-90],[28,-93],[26,-97]] },
+  { name:'Lake Superior',      poly:[[46.5,-92],[46.5,-84],[48.2,-84],[48.2,-88],[47.5,-90],[46.8,-92]] },
+  { name:'Lake Michigan',      poly:[[41.6,-87.5],[41.6,-86.5],[46.1,-86.5],[46.1,-87.5]] },
+  { name:'Lake Huron',         poly:[[43.0,-83.5],[43.0,-82.0],[46.5,-82.0],[46.5,-84.5],[44.0,-83.5]] },
+  { name:'Lake Erie',          poly:[[41.3,-83.5],[41.3,-78.8],[42.9,-78.8],[42.9,-83.5]] },
+  { name:'Lake Ontario',       poly:[[43.2,-79.9],[43.2,-76.0],[44.3,-76.0],[44.3,-79.9]] },
+  { name:'Great Salt Lake',    poly:[[40.7,-112.6],[40.7,-112.0],[41.7,-112.0],[41.7,-112.6]] },
+  { name:'Chesapeake Bay',     poly:[[36.9,-76.4],[36.9,-75.9],[39.3,-75.9],[39.3,-76.4]] },
+  { name:'Puget Sound',        poly:[[47.0,-122.8],[47.0,-122.2],[48.8,-122.2],[48.8,-122.8]] },
+  { name:'San Francisco Bay',  poly:[[37.4,-122.5],[37.4,-122.0],[38.1,-122.0],[38.1,-122.5]] },
+  { name:'Cook Inlet',         poly:[[59.0,-152],[59.0,-151],[61.5,-151],[61.5,-152]] },
+];
+
+// Point-in-polygon ray casting
+function pointInPoly(lat,lng,poly){
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const [yi,xi]=poly[i],[yj,xj]=poly[j];
+    if(((yi>lat)!==(yj>lat))&&(lng<(xj-xi)*(lat-yi)/(yj-yi)+xi))inside=!inside;
+  }
+  return inside;
+}
+
+// Sample N points along the line from (lat1,lng1) to (lat2,lng2)
+function crossesWater(lat1,lng1,lat2,lng2){
+  const STEPS=18;
+  for(let i=0;i<=STEPS;i++){
+    const t=i/STEPS;
+    const slat=lat1+(lat2-lat1)*t;
+    const slng=lng1+(lng2-lng1)*t;
+    for(const wb of WATER_BODIES){
+      if(pointInPoly(slat,slng,wb.poly)) return wb.name;
+    }
+  }
+  return null;
+}
+
 function onMapClick(e){
   if(G.over)return;
   const {lat,lng}=e.latlng;
@@ -649,6 +694,14 @@ function onMapClick(e){
     return;
   }
 
+  // Water body check
+  const waterHit=crossesWater(G.pos.lat,G.pos.lng,lat,lng);
+  if(waterHit){
+    addLog(`🌊 Blocked by ${waterHit}. You have no boat!`,'bad');
+    toast('You have no boat. You may only cross rivers and small bodies of water.');
+    return;
+  }
+
   // --- MOVE ---
   G.pos={lat,lng};
   G.fuel=Math.max(0,G.fuel-fuelCost);
@@ -657,10 +710,13 @@ function onMapClick(e){
   let foodCost=Math.round(7*W.foodX);
   G.food=Math.max(0,G.food-foodCost);
 
+  // Medicine cost (2 per day of travel)
+  G.med=Math.max(0,G.med-2);
+
   G.turn++;
   let msg=`Moved ${Math.round(distKm)} km`;
   if(mtn)msg+=' through mountains 🏔️';
-  msg+=`. Fuel -${fuelCost}%, Food -${foodCost}%`;
+  msg+=`. Fuel -${fuelCost}%, Food -${foodCost}%, Med -2%`;
   addLog(msg,'norm');
 
   if(mtn)addLog('⛰️ Mountain terrain — high fuel burn!','info');
