@@ -17,8 +17,8 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace}
 
-/* scanlines */
-body::after{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px);pointer-events:none;z-index:9998}
+/* scanlines — applied via #scanlines div, not pseudo-element (Safari pointer-events fix) */
+#scanlines{position:fixed;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px);pointer-events:none;z-index:9998}
 
 /* ── INTRO ── */
 #intro{position:fixed;top:0;left:0;right:0;bottom:0;background:#1a1c1a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;z-index:1000;transition:opacity .6s}
@@ -30,7 +30,7 @@ body::after{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:r
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.45}}
 .i-brief{max-width:580px;text-align:center;line-height:1.85;margin:28px 20px;font-size:13px;border:1px solid var(--border);padding:22px;color:var(--white)}
 .i-brief span{color:var(--amber)}
-.btn{font-family:'Orbitron',monospace;font-weight:700;color:#000;background:var(--green);border:none;padding:13px 38px;cursor:pointer;letter-spacing:3px;text-transform:uppercase;font-size:15px;box-shadow:0 0 22px rgba(57,255,20,.55);-webkit-clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));transition:all .2s;position:relative;z-index:10}
+.btn{font-family:'Orbitron',monospace;font-weight:700;color:#000;background:var(--green);border:none;padding:13px 38px;cursor:pointer;letter-spacing:3px;text-transform:uppercase;font-size:15px;box-shadow:0 0 22px rgba(57,255,20,.55);border-radius:3px;transition:all .2s;position:relative;z-index:10}
 .btn:hover{background:#fff;box-shadow:0 0 40px rgba(57,255,20,.9);transform:scale(1.04)}
 .btn.danger-btn{background:var(--red);color:#fff;box-shadow:0 0 22px rgba(255,42,42,.55)}
 .btn.danger-btn:hover{background:#fff;color:var(--red)}
@@ -135,6 +135,7 @@ body::after{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:r
 </style>
 </head>
 <body>
+<div id="scanlines"></div>
 
 <!-- ═══ INTRO ═══ -->
 <div id="intro">
@@ -573,17 +574,25 @@ function realTimeDayTick(){
 // SCREENS
 // ══════════════════════════════════════════════════
 function showScreen(id){
-  ['intro','start-sel','dest-sel','game','result'].forEach(s=>{
-    const el=document.getElementById(s);
-    if(!el)return;
-    if(s===id){
-      if(el.classList.contains('sel-screen'))el.classList.add('show');
-      else{el.style.display='';if(el.id==='result')el.classList.add('show');if(el.id==='game')el.classList.add('show');}
-    } else {
-      if(el.classList.contains('sel-screen'))el.classList.remove('show');
-      else el.style.display='none';
-    }
-  });
+  // Hide everything with explicit inline styles
+  var intro    = document.getElementById('intro');
+  var startSel = document.getElementById('start-sel');
+  var destSel  = document.getElementById('dest-sel');
+  var game     = document.getElementById('game');
+  var result   = document.getElementById('result');
+
+  intro.style.display    = 'none';
+  startSel.style.display = 'none';
+  destSel.style.display  = 'none';
+  game.style.display     = 'none';
+  result.style.display   = 'none';
+
+  // Show only the requested screen
+  if(id === 'intro')     intro.style.display    = 'flex';
+  if(id === 'start-sel') startSel.style.display = 'flex';
+  if(id === 'dest-sel')  destSel.style.display  = 'flex';
+  if(id === 'game')      game.style.display     = 'block';
+  if(id === 'result')    result.style.display   = 'flex';
 }
 
 function pickStart(id){
@@ -1282,7 +1291,7 @@ function doWin(reached){
     Supply Stops Found: <strong>${G.collected.size} of ${STOPS.length}</strong>
   `;
   const rEl=document.getElementById('result');
-  rEl.style.display='flex';rEl.classList.add('show');
+  rEl.style.display='flex';
   addLog('🛡 SAFE ZONE REACHED — MISSION COMPLETE!','ok');
 }
 
@@ -1308,7 +1317,7 @@ function doLose(reason){
     <span style="color:#ffb600">Tip: Study the map before moving. Find supply stops<br>along your route. Watch zombie zone expansion!</span>
   `;
   const rEl=document.getElementById('result');
-  rEl.style.display='flex';rEl.classList.add('show');
+  rEl.style.display='flex';
 }
 
 // ══════════════════════════════════════════════════
@@ -1349,17 +1358,12 @@ function resetGame(){
   const chkH=document.getElementById('chk-highway');if(chkH)chkH.checked=false;
   const chkZ=document.getElementById('chk-zombie');if(chkZ)chkZ.checked=true;
   G.zombieLayerOn=true;
-  document.getElementById('result').classList.remove('show');
-  document.getElementById('result').style.display='none';
-  document.getElementById('game').classList.remove('show');
-  G.startId=null;G.destId=null;G.over=false;
-  // Clear log
   document.getElementById('log-msgs').innerHTML='';
   showScreen('start-sel');
 }
 
-// Start on intro
-document.getElementById('intro').style.display='flex';
+// Show intro on load
+showScreen('intro');
 </script>
 </body>
 </html>
