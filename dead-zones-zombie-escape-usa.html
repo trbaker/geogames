@@ -286,9 +286,17 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   <!-- RIGHT PANEL -->
   <div id="rpanel">
 
-    <!-- MAP LAYERS -->
+    <!-- MAP LAYERS + LEGEND (combined) -->
     <div class="rp-sec">
       <div class="rp-head">🗂 Map Layers</div>
+
+      <!-- Toggleable layers -->
+      <label class="layer-row">
+        <input type="checkbox" id="chk-zombie" onchange="toggleZombieLayer()" checked>
+        <span class="layer-icon">☣</span>
+        <span class="layer-lbl">Zombie Zones</span>
+        <span class="leg-dot" style="background:var(--red);box-shadow:0 0 4px var(--red);margin-left:auto"></span>
+      </label>
       <label class="layer-row">
         <input type="checkbox" id="chk-weather" onchange="toggleWeatherLayer()">
         <span class="layer-icon">🌧</span>
@@ -299,12 +307,11 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
         <span class="layer-icon">🛣</span>
         <span class="layer-lbl">State &amp; Federal Highways</span>
       </label>
-    </div>
 
-    <!-- LEGEND -->
-    <div class="rp-sec">
-      <div class="rp-head">📖 Legend</div>
-      <div class="leg"><div class="leg-dot" style="background:var(--red);box-shadow:0 0 5px var(--red)"></div>Zombie Zone</div>
+      <!-- Divider -->
+      <div style="border-top:1px solid var(--border);margin:8px 0 6px"></div>
+
+      <!-- Static legend items -->
       <div class="leg"><div class="leg-dot" style="background:var(--green)"></div>Your Position</div>
       <div class="leg"><div class="leg-dot" style="background:var(--safe)"></div>Safe Zone</div>
       <div class="leg"><div class="leg-dot" style="background:var(--amber)"></div>Supply Stop</div>
@@ -480,6 +487,7 @@ const G = {
   dayTimer:null, tickTimer:null, tickSecsLeft:180,
   weatherLayer:null, weatherLayerOn:false,
   highwayLayer:null, highwayLayerOn:false,
+  zombieLayerOn:true,
 };
 
 // ══════════════════════════════════════════════════
@@ -1162,7 +1170,17 @@ async function fetchRainViewerLayer(){
   }
 }
 
-function refreshWeatherLayer(lat,lng){
+function toggleZombieLayer(){
+  const chk=document.getElementById('chk-zombie');
+  const turnOn=chk?chk.checked:!G.zombieLayerOn;
+  G.zombieLayerOn=turnOn;
+  G.zomCircles.forEach(c=>{
+    if(turnOn) c.addTo(G.map);
+    else G.map.removeLayer(c);
+  });
+  if(chk)chk.checked=turnOn;
+  addLog(turnOn?'Zombie zones visible.':'Zombie zones hidden — be careful!', turnOn?'norm':'bad');
+}
   // Re-fetch a fresh radar frame when player moves significantly
   if(G.weatherLayerOn) fetchRainViewerLayer();
 }
@@ -1329,6 +1347,8 @@ function resetGame(){
   G.highwayLayerOn=false;
   const chkW=document.getElementById('chk-weather');if(chkW)chkW.checked=false;
   const chkH=document.getElementById('chk-highway');if(chkH)chkH.checked=false;
+  const chkZ=document.getElementById('chk-zombie');if(chkZ)chkZ.checked=true;
+  G.zombieLayerOn=true;
   document.getElementById('result').classList.remove('show');
   document.getElementById('result').style.display='none';
   document.getElementById('game').classList.remove('show');
