@@ -104,6 +104,13 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .rp-btn:hover{background:var(--gfade);border-color:var(--green)}
 .leg{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:11px}
 .leg-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.layer-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;cursor:pointer;font-size:11px;color:var(--white);user-select:none}
+.layer-row:last-child{margin-bottom:0}
+.layer-row input[type="checkbox"]{appearance:none;-webkit-appearance:none;width:14px;height:14px;border:1px solid var(--border);background:var(--bg);cursor:pointer;flex-shrink:0;position:relative;top:0}
+.layer-row input[type="checkbox"]:checked{background:var(--green);border-color:var(--green)}
+.layer-row input[type="checkbox"]:checked::after{content:'✓';position:absolute;color:#000;font-size:10px;font-weight:900;top:-1px;left:1px}
+.layer-icon{font-size:14px;flex-shrink:0}
+.layer-lbl{color:var(--text);font-size:11px;line-height:1.3}
 .wicon{font-size:22px;text-align:center;margin:4px 0}
 
 /* ── TOAST ── */
@@ -266,8 +273,6 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
       <button class="hud-btn" onclick="panToPlayer()">📍 My Position</button>
       <button class="hud-btn" onclick="panToSafeZone()">🛡 Safe Zone</button>
       <button class="hud-btn" onclick="panToUSA()">🗺 Full Map</button>
-      <button class="hud-btn" id="wx-toggle-btn" onclick="toggleWeatherLayer()" style="color:#29b6f6;border-color:#1a4a5a">🌧 Weather Layer: OFF</button>
-      <button class="hud-btn" id="hw-toggle-btn" onclick="toggleHighwayLayer()" style="color:#ffb600;border-color:#4a3a00">🛣 Highways: OFF</button>
       <button class="hud-btn" id="giveup-btn" onclick="giveUp()" style="color:var(--red);border-color:var(--rdim)">🏳 I Give Up</button>
     </div>
   </div>
@@ -280,19 +285,23 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 
   <!-- RIGHT PANEL -->
   <div id="rpanel">
+
+    <!-- MAP LAYERS -->
     <div class="rp-sec">
-      <div class="rp-head">🎯 Mission</div>
-      <div class="rp-body" id="rp-mission">Reach the Safe Zone</div>
+      <div class="rp-head">🗂 Map Layers</div>
+      <label class="layer-row">
+        <input type="checkbox" id="chk-weather" onchange="toggleWeatherLayer()">
+        <span class="layer-icon">🌧</span>
+        <span class="layer-lbl">Live Weather Radar</span>
+      </label>
+      <label class="layer-row">
+        <input type="checkbox" id="chk-highway" onchange="toggleHighwayLayer()">
+        <span class="layer-icon">🛣</span>
+        <span class="layer-lbl">State &amp; Federal Highways</span>
+      </label>
     </div>
-    <div class="rp-sec">
-      <div class="rp-head">🌤 Weather</div>
-      <div class="wicon" id="rp-wicon">☀️</div>
-      <div class="rp-body" id="rp-wtext">Clear skies. Normal travel speed.</div>
-    </div>
-    <div class="rp-sec">
-      <div class="rp-head">⚠ Threat Status</div>
-      <div class="rp-body" id="rp-threat">Zone clear. Move fast.</div>
-    </div>
+
+    <!-- LEGEND -->
     <div class="rp-sec">
       <div class="rp-head">📖 Legend</div>
       <div class="leg"><div class="leg-dot" style="background:var(--red);box-shadow:0 0 5px var(--red)"></div>Zombie Zone</div>
@@ -301,6 +310,27 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
       <div class="leg"><div class="leg-dot" style="background:var(--amber)"></div>Supply Stop</div>
       <div class="leg"><div class="leg-dot" style="background:#e91e63"></div>Mountain Zone</div>
     </div>
+
+    <!-- MISSION -->
+    <div class="rp-sec">
+      <div class="rp-head">🎯 Mission</div>
+      <div class="rp-body" id="rp-mission">Reach the Safe Zone</div>
+    </div>
+
+    <!-- WEATHER STATUS -->
+    <div class="rp-sec">
+      <div class="rp-head">🌤 Weather</div>
+      <div class="wicon" id="rp-wicon">☀️</div>
+      <div class="rp-body" id="rp-wtext">Clear skies. Normal travel speed.</div>
+    </div>
+
+    <!-- THREAT -->
+    <div class="rp-sec">
+      <div class="rp-head">⚠ Threat Status</div>
+      <div class="rp-body" id="rp-threat">Zone clear. Move fast.</div>
+    </div>
+
+    <!-- HOW TO PLAY -->
     <div class="rp-sec">
       <div class="rp-head">📋 How to Play</div>
       <div class="rp-body">
@@ -312,10 +342,13 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
         • Zombie zones expand every 3 moves!
       </div>
     </div>
+
+    <!-- GEO FACTS -->
     <div class="rp-sec">
       <div class="rp-head">📐 Geography Facts</div>
       <div class="rp-body" id="rp-geo">Use the map to study your route!</div>
     </div>
+
   </div>
 
   <!-- TOAST -->
@@ -1079,26 +1112,20 @@ function changeWeather(){
 // Falls back to a windy.com embed overlay
 // ══════════════════════════════════════════════════
 function toggleWeatherLayer(){
-  const btn=document.getElementById('wx-toggle-btn');
-  if(!G.map) return;
+  const chk=document.getElementById('chk-weather');
+  if(!G.map){if(chk)chk.checked=false;return;}
+  const turnOn=chk?chk.checked:!G.weatherLayerOn;
 
-  if(G.weatherLayerOn){
-    // Turn off
-    if(G.weatherLayer){ G.map.removeLayer(G.weatherLayer); G.weatherLayer=null; }
+  if(!turnOn){
+    if(G.weatherLayer){G.map.removeLayer(G.weatherLayer);G.weatherLayer=null;}
     G.weatherLayerOn=false;
-    btn.textContent='🌧 Weather Layer: OFF';
-    btn.style.color='#29b6f6';
-    btn.style.borderColor='#1a4a5a';
-    addLog('Weather layer hidden.','norm');
+    if(chk)chk.checked=false;
+    addLog('Weather radar layer hidden.','norm');
   } else {
-    // Turn on — use RainViewer public radar tiles (truly free, no key)
     addLog('Loading live weather radar layer…','info');
     fetchRainViewerLayer();
     G.weatherLayerOn=true;
-    btn.textContent='🌧 Weather Layer: ON';
-    btn.style.color='#fff';
-    btn.style.borderColor='#29b6f6';
-    btn.style.background='rgba(41,182,246,0.15)';
+    if(chk)chk.checked=true;
   }
 }
 
@@ -1129,10 +1156,9 @@ async function fetchRainViewerLayer(){
     toast('Live weather radar is now visible on the map.',3000);
   } catch(err){
     addLog('Radar unavailable — try again shortly.','bad');
-    // Reset toggle state
     G.weatherLayerOn=false;
-    const btn=document.getElementById('wx-toggle-btn');
-    if(btn){btn.textContent='🌧 Weather Layer: OFF';btn.style.color='#29b6f6';btn.style.background='';}
+    const chk=document.getElementById('chk-weather');
+    if(chk)chk.checked=false;
   }
 }
 
@@ -1146,21 +1172,16 @@ function refreshWeatherLayer(lat,lng){
 // USA state + federal highways from Esri's public services
 // ══════════════════════════════════════════════════
 function toggleHighwayLayer(){
-  const btn=document.getElementById('hw-toggle-btn');
-  if(!G.map) return;
+  const chk=document.getElementById('chk-highway');
+  if(!G.map){if(chk)chk.checked=false;return;}
+  const turnOn=chk?chk.checked:!G.highwayLayerOn;
 
-  if(G.highwayLayerOn){
-    // Turn off
-    if(G.highwayLayer){ G.map.removeLayer(G.highwayLayer); G.highwayLayer=null; }
+  if(!turnOn){
+    if(G.highwayLayer){G.map.removeLayer(G.highwayLayer);G.highwayLayer=null;}
     G.highwayLayerOn=false;
-    btn.textContent='🛣 Highways: OFF';
-    btn.style.color='#ffb600';
-    btn.style.borderColor='#4a3a00';
-    btn.style.background='';
+    if(chk)chk.checked=false;
     addLog('Highway layer hidden.','norm');
   } else {
-    // Turn on — ArcGIS REST API: USA Transportation (highways)
-    // World_Transportation MapServer includes interstates, US routes, state routes
     G.highwayLayer=L.tileLayer(
       'https://server.arcgisonline.com/arcgis/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
       {
@@ -1170,14 +1191,10 @@ function toggleHighwayLayer(){
         zIndex:200,
       }
     ).addTo(G.map);
-
     G.highwayLayerOn=true;
-    btn.textContent='🛣 Highways: ON';
-    btn.style.color='#fff';
-    btn.style.borderColor='#ffb600';
-    btn.style.background='rgba(255,182,0,0.12)';
+    if(chk)chk.checked=true;
     addLog('Highway layer ON — ArcGIS World Transportation (interstates, US routes, state highways).','ok');
-    toast('Highway layer on. Yellow = Interstate · Orange = US Route · White = State Highway',4500);
+    toast('Highway layer on. Shows interstates, US routes & state highways.',4000);
   }
 }
 
@@ -1310,8 +1327,8 @@ function resetGame(){
   G.weatherLayerOn=false;
   if(G.highwayLayer&&G.map){G.map.removeLayer(G.highwayLayer);G.highwayLayer=null;}
   G.highwayLayerOn=false;
-  const hwBtn=document.getElementById('hw-toggle-btn');
-  if(hwBtn){hwBtn.textContent='🛣 Highways: OFF';hwBtn.style.color='#ffb600';hwBtn.style.background='';}
+  const chkW=document.getElementById('chk-weather');if(chkW)chkW.checked=false;
+  const chkH=document.getElementById('chk-highway');if(chkH)chkH.checked=false;
   document.getElementById('result').classList.remove('show');
   document.getElementById('result').style.display='none';
   document.getElementById('game').classList.remove('show');
