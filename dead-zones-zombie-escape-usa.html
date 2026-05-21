@@ -170,13 +170,34 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
       <div class="c-pros-cons">Routes: North along coast · Inland via I-15 · Desert crossing to Nevada</div>
       <div class="c-diff diff-exp">⚠ EXPERT — Terrain & zombie density · Bottlenecks</div>
     </div>
+    <div class="card" onclick="pickStart('miami')">
+      <div class="c-name">Miami, FL</div>
+      <div class="c-loc">📍 South Florida · Atlantic Coast</div>
+      <div class="c-desc">You're at the tip of a peninsula with water on three sides. The only way out is north — straight through a densely infected state. Heat drains supplies fast and hurricanes can close roads without warning.</div>
+      <div class="c-pros-cons">Routes: North via I-95 · Inland through the Everglades · US-27 through farmland</div>
+      <div class="c-diff diff-exp">⚠ EXPERT — Peninsula trap · Heat · No western escape</div>
+    </div>
+    <div class="card" onclick="pickStart('newyork')">
+      <div class="c-name">New York, NY</div>
+      <div class="c-loc">📍 Northeast Megalopolis · East Coast</div>
+      <div class="c-desc">One of the largest zombie outbreaks on the map started right here. Bridges and tunnels are choke points. Surrounding cities — Philadelphia, Boston — are also infected. Every exit is contested.</div>
+      <div class="c-pros-cons">Routes: North through upstate NY · West across NJ · Northwest via I-78</div>
+      <div class="c-diff diff-exp">⚠ EXPERT — Surrounded by outbreaks · Bridge bottlenecks</div>
+    </div>
+    <div class="card" onclick="pickStart('seattle')">
+      <div class="c-name">Seattle, WA</div>
+      <div class="c-loc">📍 Pacific Northwest · Puget Sound</div>
+      <div class="c-desc">Hemmed in by Puget Sound to the west and the Cascades to the east. Fog and rain slow travel. You must cross a mountain pass or navigate south through Portland to find open ground.</div>
+      <div class="c-pros-cons">Routes: East over Cascades · South through Oregon · North toward Canada</div>
+      <div class="c-diff diff-hard">⚠ HARD — Mountains · Wet weather · Limited crossings</div>
+    </div>
   </div>
 </div>
 
 <!-- ═══ DESTINATION ═══ -->
 <div class="sel-screen" id="dest-sel">
   <div class="sel-title">🛡 Choose Your Safe Zone</div>
-  <div class="sel-sub">PICK YOUR DESTINATION BEFORE YOU MOVE</div>
+  <div class="sel-sub">PICK A DESTINATION — OR EXPLORE AND FIND ONE ON THE MAP</div>
   <div class="cards">
     <div class="card safe-card" onclick="pickDest('denver')">
       <div class="c-name">Denver Mountain Shelter</div>
@@ -196,6 +217,12 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
       <div class="c-desc">A remote solar research facility with its own power grid. Almost no surrounding population means minimal zombie activity — but extreme heat and long gaps between supply stops make survival difficult.</div>
       <div class="c-pros-cons">✓ Isolated, low zombie density<br>✗ Heat, dehydration, resource scarcity</div>
     </div>
+  </div>
+  <div style="margin-top:22px;text-align:center">
+    <button class="btn" style="background:transparent;color:var(--amber);border:1px solid var(--amber);box-shadow:0 0 14px rgba(255,182,0,.2);font-size:12px;padding:10px 28px;clip-path:none" onclick="pickDest(null)">
+      🗺 I'll Find My Own Way — Skip
+    </button>
+    <div style="font-size:11px;color:var(--text);margin-top:10px;letter-spacing:1px">All three safe zones will appear on the map. Reach any one to win.</div>
   </div>
 </div>
 
@@ -311,6 +338,9 @@ const STARTS = {
   raleigh:     { lat:35.7796, lng:-78.6382, name:'Raleigh, NC',     zoom:6 },
   dallas:      { lat:32.7767, lng:-96.7970, name:'Dallas, TX',       zoom:6 },
   losangeles:  { lat:34.0522, lng:-118.243, name:'Los Angeles, CA',  zoom:6 },
+  miami:       { lat:25.7617, lng:-80.1918, name:'Miami, FL',        zoom:6 },
+  newyork:     { lat:40.7128, lng:-74.0060, name:'New York, NY',     zoom:6 },
+  seattle:     { lat:47.6062, lng:-122.332, name:'Seattle, WA',      zoom:6 },
 };
 const SAFES = {
   denver:      { lat:39.7392, lng:-104.990, name:'Denver Mountain Shelter',  hint:'In the Rocky Mountains of Colorado.' },
@@ -509,16 +539,20 @@ function initGame(){
   buildZombieZones();
   buildSupplyStops();
   placePlayerMark(S.lat,S.lng);
-  placeSafeMark(D);
+  if(G.destId){
+    placeSafeMark(SAFES[G.destId]);
+  } else {
+    Object.values(SAFES).forEach(d=>placeSafeMark(d));
+  }
 
   G.map.on('click',onMapClick);
 
-  document.getElementById('rp-mission').textContent='Reach: '+D.name;
-  document.getElementById('rp-geo').textContent=D.hint;
+  document.getElementById('rp-mission').textContent=G.destId?'Reach: '+SAFES[G.destId].name:'Reach any Safe Zone';
+  document.getElementById('rp-geo').textContent=G.destId?SAFES[G.destId].hint:'Three safe zones are marked on the map. Reach any one to win.';
 
   updateHUD();
   addLog('☣ Mission started from '+S.name,'ok');
-  addLog('Destination: '+D.name,'info');
+  addLog(G.destId?'Destination: '+SAFES[G.destId].name:'Destination: Your choice — find any Safe Zone!','info');
   addLog('Click any location on the map to move your survivor.','norm');
   addLog('Yellow icons = supplies. Blue shield = Safe Zone.','norm');
 
@@ -538,6 +572,9 @@ function buildZombieZones(){
     if(G.startId==='raleigh'&&z.name==='Raleigh')r=40000;
     if(G.startId==='dallas'&&z.name==='Dallas')r=50000;
     if(G.startId==='losangeles'&&z.name==='Los Angeles')r=60000;
+    if(G.startId==='miami'&&z.name==='Miami')r=45000;
+    if(G.startId==='newyork'&&z.name==='New York')r=55000;
+    if(G.startId==='seattle'&&z.name==='Seattle')r=45000;
     G.zomR[i]=r;
 
     const c=L.circle([z.lat,z.lng],{
@@ -619,6 +656,46 @@ function placeSafeMark(D){
 // MOVEMENT
 // ══════════════════════════════════════════════════
 // ══════════════════════════════════════════════════
+// ELEVATION — approximate by geographic region (meters)
+// ══════════════════════════════════════════════════
+function estimateElevation(lat,lng){
+  // High Rockies core (CO/WY/MT)
+  if(lng>=-108&&lng<=-102&&lat>=37&&lat<=48) return 3100;
+  // Rocky Mountain region (ID/NV/UT/NM)
+  if(lng>=-116&&lng<=-102&&lat>=35&&lat<=49) return 2200;
+  // Sierra Nevada
+  if(lng>=-122&&lng<=-118&&lat>=36&&lat<=42) return 2400;
+  // Cascades (OR/WA)
+  if(lng>=-122&&lng<=-120&&lat>=42&&lat<=49) return 1900;
+  // Colorado Plateau (UT/AZ)
+  if(lng>=-114&&lng<=-107&&lat>=35&&lat<=39) return 1700;
+  // Great Basin / Basin and Range
+  if(lng>=-118&&lng<=-112&&lat>=36&&lat<=42) return 1300;
+  // Mojave / Sonoran Desert
+  if(lng>=-117&&lng<=-110&&lat>=31&&lat<=36) return 800;
+  // Appalachians (core ridge)
+  if(lng>=-84&&lng<=-78&&lat>=35&&lat<=43)   return 950;
+  // Appalachian foothills
+  if(lng>=-87&&lng<=-75&&lat>=33&&lat<=44)   return 500;
+  // Great Plains (high)
+  if(lng>=-105&&lng<=-96&&lat>=36&&lat<=49)  return 700;
+  // Great Plains (low)
+  if(lng>=-96&&lng<=-88&&lat>=34&&lat<=49)   return 350;
+  // Central Valley CA
+  if(lng>=-122&&lng<=-119&&lat>=35&&lat<=40) return 80;
+  // Gulf Coast / Deep South
+  if(lat<=32&&lng>=-97&&lng<=-79)            return 30;
+  // Atlantic Coastal Plain
+  if(lng>=-81&&lng<=-74&&lat>=30&&lat<=40)   return 50;
+  // Pacific Coast strip
+  if(lng<=-121&&lat>=32&&lat<=49)            return 60;
+  // Great Lakes region
+  if(lng>=-92&&lng<=-76&&lat>=41&&lat<=48)   return 260;
+  // Default mid-elevation
+  return 200;
+}
+
+// ══════════════════════════════════════════════════
 // LARGE WATER BODIES (no-cross zones — rivers allowed)
 // Each is a simple bounding polygon [lat,lng] pairs
 // ══════════════════════════════════════════════════
@@ -686,7 +763,26 @@ function onMapClick(e){
   const mtn=inMountains(lat,lng)||inMountains(G.pos.lat,G.pos.lng);
   if(mtn){fuelCost*=1.9;}
   fuelCost*=W.fuelX;
-  fuelCost=Math.max(2,Math.round(fuelCost));
+
+  // Elevation / slope penalty
+  const elevFrom=estimateElevation(G.pos.lat,G.pos.lng);
+  const elevTo=estimateElevation(lat,lng);
+  const elevDiff=elevTo-elevFrom; // positive = climbing
+  let elevMsg='';
+  if(elevDiff>600){
+    const penalty=Math.min(elevDiff/2000,0.9);
+    fuelCost=Math.round(fuelCost*(1+penalty));
+    elevMsg=`⛰️ Climbing ${Math.round(elevDiff)}m — steep grade, heavy fuel burn!`;
+  } else if(elevDiff>200){
+    const penalty=Math.min(elevDiff/3000,0.4);
+    fuelCost=Math.round(fuelCost*(1+penalty));
+    elevMsg=`↗️ Gradual climb (+${Math.round(elevDiff)}m) — slight fuel increase.`;
+  } else if(elevDiff<-600){
+    fuelCost=Math.max(2,Math.round(fuelCost*0.80));
+    elevMsg=`↘️ Descending ${Math.abs(Math.round(elevDiff))}m — fuel saved on the downgrade.`;
+  }
+
+  fuelCost=Math.max(2,fuelCost);
 
   if(G.fuel<fuelCost){
     addLog(`⛽ Not enough fuel! Need ${fuelCost}%, have ${Math.round(G.fuel)}%.`,'bad');
@@ -720,6 +816,10 @@ function onMapClick(e){
   addLog(msg,'norm');
 
   if(mtn)addLog('⛰️ Mountain terrain — high fuel burn!','info');
+  if(elevMsg)addLog(elevMsg,'info');
+  // Show elevation context in right panel
+  document.getElementById('rp-geo').textContent=
+    `Elevation: ~${elevFrom}m → ~${elevTo}m (${elevDiff>=0?'+':''}${Math.round(elevDiff)}m)${elevMsg?' — '+elevMsg.replace(/[↗️↘️⛰️]/g,'').trim():''}`;
 
   placePlayerMark(lat,lng);
 
@@ -745,8 +845,9 @@ function onMapClick(e){
   updateHUD();
 
   // Win check
-  const D=SAFES[G.destId];
-  if(haversine(lat,lng,D.lat,D.lng)<90){doWin();return;}
+  const safeList=G.destId?[SAFES[G.destId]]:Object.values(SAFES);
+  const reached=safeList.find(d=>haversine(lat,lng,d.lat,d.lng)<90);
+  if(reached){doWin(reached);return;}
 
   // Lose checks
   if(G.fuel<=0){doLose('Out of fuel! Your vehicle stopped in the middle of nowhere.');return;}
@@ -880,9 +981,10 @@ function updateHUD(){
 // ══════════════════════════════════════════════════
 // WIN / LOSE
 // ══════════════════════════════════════════════════
-function doWin(){
+function doWin(reached){
   G.over=true;
-  const S=STARTS[G.startId],D=SAFES[G.destId];
+  const S=STARTS[G.startId];
+  const D=reached||SAFES[G.destId];
   document.getElementById('r-title').textContent='✓ SURVIVED';
   document.getElementById('r-title').className='r-title win';
   document.getElementById('r-sub').textContent=D.name+' reached!';
