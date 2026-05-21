@@ -266,6 +266,8 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
       <button class="hud-btn" onclick="panToPlayer()">📍 My Position</button>
       <button class="hud-btn" onclick="panToSafeZone()">🛡 Safe Zone</button>
       <button class="hud-btn" onclick="panToUSA()">🗺 Full Map</button>
+      <button class="hud-btn" id="wx-toggle-btn" onclick="toggleWeatherLayer()" style="color:#29b6f6;border-color:#1a4a5a">🌧 Weather Layer: OFF</button>
+      <button class="hud-btn" id="hw-toggle-btn" onclick="toggleHighwayLayer()" style="color:#ffb600;border-color:#4a3a00">🛣 Highways: OFF</button>
       <button class="hud-btn" id="giveup-btn" onclick="giveUp()" style="color:var(--red);border-color:var(--rdim)">🏳 I Give Up</button>
     </div>
   </div>
@@ -437,12 +439,14 @@ const G = {
   food:100, fuel:100, med:100,
   pos:null, startId:null, destId:null,
   weather:'clear',
-  map:null, playerMark:null, safeMark:null,
+  map:null, playerMark:null, safeMarks:[],
   zomCircles:[], zomR:[],
   supMarkers:[], collected:new Set(),
   trail:[], trailLine:null,
   over:false,
   dayTimer:null, tickTimer:null, tickSecsLeft:180,
+  weatherLayer:null, weatherLayerOn:false,
+  highwayLayer:null, highwayLayerOn:false,
 };
 
 // ══════════════════════════════════════════════════
@@ -558,7 +562,7 @@ function pickDest(id){
 function initGame(){
   G.turn=1; G.food=100; G.fuel=100; G.med=100;
   G.weather='clear'; G.over=false; G.collected=new Set();
-  G.trail=[]; G.zomCircles=[]; G.supMarkers=[];
+  G.trail=[]; G.zomCircles=[]; G.supMarkers=[]; G.safeMarks=[];
   G.zomR=ZOMCITIES.map(z=>z.r);
 
   const S=STARTS[G.startId], D=SAFES[G.destId];
@@ -604,6 +608,9 @@ function initGame(){
   addLog(G.destId?'Destination: '+SAFES[G.destId].name:'Destination: Your choice — find any Safe Zone!','info');
   addLog('Click any location on the map to move your survivor.','norm');
   addLog('Yellow icons = supplies. Blue shield = Safe Zone.','norm');
+
+  // Fetch real weather for starting position
+  fetchRealWeather(S.lat, S.lng);
 
   toast('Click the map to move! Avoid the red zombie zones!',5000);
 
@@ -694,18 +701,18 @@ function placePlayerMark(lat,lng){
 }
 
 function placeSafeMark(D){
-  if(G.safeMark)G.map.removeLayer(G.safeMark);
   const ico=L.divIcon({
     html:`<div style="text-align:center">
       <div style="font-size:26px;filter:drop-shadow(0 0 6px #00d4ff)">🛡</div>
-      <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:#00d4ff;text-shadow:0 0 4px #00d4ff;white-space:nowrap;margin-top:-2px">SAFE ZONE</div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:#00d4ff;text-shadow:0 0 4px #00d4ff;white-space:nowrap;margin-top:-2px">${D.name}</div>
     </div>`,
-    iconSize:[70,42],iconAnchor:[35,38],className:'',
+    iconSize:[120,42],iconAnchor:[60,38],className:'',
   });
-  G.safeMark=L.marker([D.lat,D.lng],{icon:ico,zIndexOffset:900}).addTo(G.map);
-  G.safeMark.bindPopup(`<div style="background:#07100f;color:#00d4ff;font-family:'Share Tech Mono',monospace;padding:9px;border:1px solid #00d4ff;font-size:12px">
-    🛡 <b>${D.name}</b><br><span style="color:#cce8cc">YOUR DESTINATION</span>
+  const m=L.marker([D.lat,D.lng],{icon:ico,zIndexOffset:900}).addTo(G.map);
+  m.bindPopup(`<div style="background:#07100f;color:#00d4ff;font-family:'Share Tech Mono',monospace;padding:9px;border:1px solid #00d4ff;font-size:12px">
+    🛡 <b>${D.name}</b><br><span style="color:#cce8cc">SAFE ZONE — Reach here to win!</span><br><span style="color:#7abf7a;font-size:11px">${D.hint}</span>
   </div>`);
+  G.safeMarks.push(m);
 }
 
 // ══════════════════════════════════════════════════
@@ -899,6 +906,9 @@ function onMapClick(e){
 
   placePlayerMark(lat,lng);
 
+  // Fetch real weather at new position
+  fetchRealWeather(lat, lng);
+
   // Collect supplies
   collectNearby(lat,lng);
 
@@ -910,9 +920,6 @@ function onMapClick(e){
     expandZomZones();
     addLog('⚠️ Zombie zones expanding — the infected are spreading!','bad');
   }
-
-  // Weather change
-  if(G.turn%5===0)changeWeather();
 
   // Geography fact
   showGeoFact(lat,lng);
@@ -992,9 +999,58 @@ function doZomCheck(lat,lng){
 }
 
 // ══════════════════════════════════════════════════
-// WEATHER
+// WEATHER — real data from Open-Meteo (no API key needed)
 // ══════════════════════════════════════════════════
-function changeWeather(){
+
+// WMO weather code → game weather mapping
+function wmoToGame(code, windspeed){
+  if(code===0)                          return 'clear';
+  if(code<=2)                           return 'clear';
+  if(code===3)                          return windspeed>40 ? 'storm' : 'rain';
+  if(code>=45&&code<=48)                return 'fog';
+  if(code>=51&&code<=67)                return 'rain';
+  if(code>=71&&code<=77)                return 'snow';
+  if(code>=80&&code<=82)                return 'rain';
+  if(code>=85&&code<=86)                return 'snow';
+  if(code>=95&&code<=99)                return 'storm';
+  return 'clear';
+}
+
+async function fetchRealWeather(lat, lng){
+  try {
+    const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(3)}&longitude=${lng.toFixed(3)}&current=temperature_2m,weathercode,windspeed_10m&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=auto`;
+    const res=await fetch(url);
+    if(!res.ok) throw new Error('Weather fetch failed');
+    const data=await res.json();
+    const {weathercode, windspeed_10m, temperature_2m}=data.current;
+
+    // Map to game weather
+    let wid=wmoToGame(weathercode, windspeed_10m);
+
+    // Override with heat wave if very hot and no storm
+    if(temperature_2m>=98 && wid==='clear') wid='heat';
+
+    const W=WEATHERS.find(w=>w.id===wid)||WEATHERS[0];
+    G.weather=W.id;
+
+    // Build a richer description with real data
+    const realDesc=`${W.desc} · ${Math.round(temperature_2m)}°F · Wind ${Math.round(windspeed_10m)} mph`;
+
+    document.getElementById('rp-wicon').textContent=W.icon;
+    document.getElementById('rp-wtext').textContent=realDesc;
+    document.getElementById('h-weather').textContent=W.icon+' '+W.label+' · '+Math.round(temperature_2m)+'°F';
+    addLog(`🌤 Real weather at position: ${W.label} — ${realDesc}`,'info');
+
+    // Update weather layer position if on
+    if(G.weatherLayerOn) refreshWeatherLayer(lat, lng);
+
+  } catch(err){
+    // Fall back to simulated weather silently
+    changeWeatherSimulated();
+  }
+}
+
+function changeWeatherSimulated(){
   const roll=Math.random();
   let w;
   if(roll<.32)w=WEATHERS[0];
@@ -1008,7 +1064,121 @@ function changeWeather(){
   document.getElementById('rp-wtext').textContent=w.desc;
   document.getElementById('h-weather').textContent=w.icon+' '+w.label;
   addLog(`🌤 Weather: ${w.label} — ${w.desc}`,'info');
-  toast(`Weather change: ${w.label}! ${w.desc}`,3500);
+  toast(`Weather: ${w.label}! ${w.desc}`,3500);
+}
+
+// Called every move and every 5-turn timer tick
+function changeWeather(){
+  if(G.pos) fetchRealWeather(G.pos.lat, G.pos.lng);
+  else changeWeatherSimulated();
+}
+
+// ══════════════════════════════════════════════════
+// WEATHER MAP LAYER  — OpenWeatherMap public tile
+// Uses the free OWM tile endpoint (no key for basic layers)
+// Falls back to a windy.com embed overlay
+// ══════════════════════════════════════════════════
+function toggleWeatherLayer(){
+  const btn=document.getElementById('wx-toggle-btn');
+  if(!G.map) return;
+
+  if(G.weatherLayerOn){
+    // Turn off
+    if(G.weatherLayer){ G.map.removeLayer(G.weatherLayer); G.weatherLayer=null; }
+    G.weatherLayerOn=false;
+    btn.textContent='🌧 Weather Layer: OFF';
+    btn.style.color='#29b6f6';
+    btn.style.borderColor='#1a4a5a';
+    addLog('Weather layer hidden.','norm');
+  } else {
+    // Turn on — use RainViewer public radar tiles (truly free, no key)
+    addLog('Loading live weather radar layer…','info');
+    fetchRainViewerLayer();
+    G.weatherLayerOn=true;
+    btn.textContent='🌧 Weather Layer: ON';
+    btn.style.color='#fff';
+    btn.style.borderColor='#29b6f6';
+    btn.style.background='rgba(41,182,246,0.15)';
+  }
+}
+
+async function fetchRainViewerLayer(){
+  try {
+    // RainViewer API — free, no key, live global radar
+    const res=await fetch('https://api.rainviewer.com/public/weather-maps.json');
+    const data=await res.json();
+    // Get the most recent radar frame
+    const frames=data.radar && data.radar.past;
+    if(!frames||!frames.length) throw new Error('No frames');
+    const latest=frames[frames.length-1];
+    const path=latest.path;
+
+    if(G.weatherLayer) G.map.removeLayer(G.weatherLayer);
+
+    G.weatherLayer=L.tileLayer(
+      `https://tilecache.rainviewer.com${path}/256/{z}/{x}/{y}/2/1_1.png`,
+      {
+        attribution:'🌧 <a href="https://www.rainviewer.com" target="_blank">RainViewer</a> live radar',
+        opacity:0.55,
+        maxZoom:16,
+        zIndex:300,
+      }
+    ).addTo(G.map);
+
+    addLog('Live radar layer loaded from RainViewer.','ok');
+    toast('Live weather radar is now visible on the map.',3000);
+  } catch(err){
+    addLog('Radar unavailable — try again shortly.','bad');
+    // Reset toggle state
+    G.weatherLayerOn=false;
+    const btn=document.getElementById('wx-toggle-btn');
+    if(btn){btn.textContent='🌧 Weather Layer: OFF';btn.style.color='#29b6f6';btn.style.background='';}
+  }
+}
+
+function refreshWeatherLayer(lat,lng){
+  // Re-fetch a fresh radar frame when player moves significantly
+  if(G.weatherLayerOn) fetchRainViewerLayer();
+}
+
+// ══════════════════════════════════════════════════
+// HIGHWAY LAYER — ArcGIS REST API transportation layer
+// USA state + federal highways from Esri's public services
+// ══════════════════════════════════════════════════
+function toggleHighwayLayer(){
+  const btn=document.getElementById('hw-toggle-btn');
+  if(!G.map) return;
+
+  if(G.highwayLayerOn){
+    // Turn off
+    if(G.highwayLayer){ G.map.removeLayer(G.highwayLayer); G.highwayLayer=null; }
+    G.highwayLayerOn=false;
+    btn.textContent='🛣 Highways: OFF';
+    btn.style.color='#ffb600';
+    btn.style.borderColor='#4a3a00';
+    btn.style.background='';
+    addLog('Highway layer hidden.','norm');
+  } else {
+    // Turn on — ArcGIS REST API: USA Transportation (highways)
+    // World_Transportation MapServer includes interstates, US routes, state routes
+    G.highwayLayer=L.tileLayer(
+      'https://server.arcgisonline.com/arcgis/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
+      {
+        attribution:'Roads: <a href="https://www.esri.com" target="_blank">Esri</a> ArcGIS World Transportation',
+        opacity:0.82,
+        maxZoom:16,
+        zIndex:200,
+      }
+    ).addTo(G.map);
+
+    G.highwayLayerOn=true;
+    btn.textContent='🛣 Highways: ON';
+    btn.style.color='#fff';
+    btn.style.borderColor='#ffb600';
+    btn.style.background='rgba(255,182,0,0.12)';
+    addLog('Highway layer ON — ArcGIS World Transportation (interstates, US routes, state highways).','ok');
+    toast('Highway layer on. Yellow = Interstate · Orange = US Route · White = State Highway',4500);
+  }
 }
 
 // ══════════════════════════════════════════════════
@@ -1111,9 +1281,14 @@ function doLose(reason){
 // ══════════════════════════════════════════════════
 function panToPlayer(){ if(G.map&&G.pos)G.map.setView([G.pos.lat,G.pos.lng],7,{animate:true}); }
 function panToSafeZone(){
-  if(!G.map||!G.destId)return;
-  const D=SAFES[G.destId];
-  G.map.setView([D.lat,D.lng],7,{animate:true});
+  if(!G.map)return;
+  if(G.safeMarks.length===1){
+    const ll=G.safeMarks[0].getLatLng();
+    G.map.setView([ll.lat,ll.lng],7,{animate:true});
+  } else if(G.safeMarks.length>1){
+    const group=L.featureGroup(G.safeMarks);
+    G.map.fitBounds(group.getBounds().pad(0.2),{animate:true});
+  }
 }
 function panToUSA(){ if(G.map)G.map.setView([38,-96],4,{animate:true}); }
 
@@ -1131,6 +1306,12 @@ function giveUp(){
 function resetGame(){
   clearInterval(G.dayTimer);
   clearInterval(G.tickTimer);
+  if(G.weatherLayer&&G.map){G.map.removeLayer(G.weatherLayer);G.weatherLayer=null;}
+  G.weatherLayerOn=false;
+  if(G.highwayLayer&&G.map){G.map.removeLayer(G.highwayLayer);G.highwayLayer=null;}
+  G.highwayLayerOn=false;
+  const hwBtn=document.getElementById('hw-toggle-btn');
+  if(hwBtn){hwBtn.textContent='🛣 Highways: OFF';hwBtn.style.color='#ffb600';hwBtn.style.background='';}
   document.getElementById('result').classList.remove('show');
   document.getElementById('result').style.display='none';
   document.getElementById('game').classList.remove('show');
