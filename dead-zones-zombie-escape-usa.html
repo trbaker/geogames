@@ -150,6 +150,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     <p style="margin-top:12px;color:var(--amber)">Use real U.S. geography to survive.<br>The best survivors think geographically.</p>
   </div>
   <button class="btn" onclick="showScreen('start-sel')">▶ Begin Mission</button>
+  <div style="margin-top:18px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--border);letter-spacing:3px">v1.1</div>
 </div>
 
 <!-- ═══ START LOCATION ═══ -->
@@ -1190,6 +1191,8 @@ function toggleZombieLayer(){
   if(chk)chk.checked=turnOn;
   addLog(turnOn?'Zombie zones visible.':'Zombie zones hidden — be careful!', turnOn?'norm':'bad');
 }
+
+function refreshWeatherLayer(lat,lng){
   // Re-fetch a fresh radar frame when player moves significantly
   if(G.weatherLayerOn) fetchRainViewerLayer();
 }
