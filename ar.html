@@ -550,11 +550,23 @@ require([
   view = new MapView({ container:"viewDiv", map:webmap, ui:{ components:[] } });
   view.ui.add(new Zoom({ view }), "bottom-right");
 
-  view.when(() => {
-    document.getElementById('placeholder').classList.add('gone');
-    setPill('on','Map ready');
+  // Enable the tracking button immediately — don't wait on the map
+  function enableBtn() {
     document.getElementById('loc-btn').disabled = false;
     document.getElementById('btn-label').textContent = '\u2295\u00a0 Start Tracking';
+  }
+
+  // Fallback: enable after 4 s even if map hasn't resolved
+  const btnFallback = setTimeout(() => {
+    enableBtn();
+    setPill('', 'Map loading\u2026');
+  }, 4000);
+
+  view.when(() => {
+    clearTimeout(btnFallback);
+    document.getElementById('placeholder').classList.add('gone');
+    setPill('on', 'Map ready');
+    enableBtn();
     TARGETS.forEach(t => {
       view.graphics.add(new Graphic({
         geometry: new Point({ latitude:t.lat, longitude:t.lng }),
@@ -562,7 +574,13 @@ require([
         popupTemplate: { title:t.name, content:'Lat: '+t.lat+'\u00b0, Lng: '+t.lng+'\u00b0' }
       }));
     });
-  }).catch(() => { setPill('err','Map error'); showErr('Failed to load ArcGIS web map.'); });
+  }).catch(err => {
+    clearTimeout(btnFallback);
+    console.warn('WebMap load error:', err);
+    setPill('err', 'Map error');
+    document.getElementById('placeholder').querySelector('p').textContent = 'Map unavailable — tracking still works.';
+    enableBtn();  // still let the user track even if the map failed
+  });
 
   window._plotPosition = function(lat, lng, acc) {
     const pt = new Point({ latitude:lat, longitude:lng });
