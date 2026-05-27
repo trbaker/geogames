@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0b0f14">
+<title>GeoLocate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/dark/main.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:      #0b0f14;
+  --surf:    #131920;
+  --surf2:   #1b2535;
+  --border:  rgba(100,180,255,0.13);
+  --border2: rgba(100,180,255,0.28);
+  --accent:  #3da8ff;
+  --green:   #00e5b0;
+  --amber:   #ffb830;
+  --warn:    #ff9d3d;
+  --text:    #e8f2ff;
+  --muted:   #5d7a96;
+  --mono:    'Space Mono', monospace;
+  --head:    'Syne', sans-serif;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+  --safe-l:   env(safe-area-inset-left, 0px);
+  --safe-r:   env(safe-area-inset-right, 0px);
+}
+html { height:100%; background:var(--bg); -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%; }
+body { height:100dvh; display:flex; flex-direction:column; background:var(--bg); color:var(--text); font-family:var(--mono); overflow:hidden; padding-top:var(--safe-top); padding-left:var(--safe-l); padding-right:var(--safe-r); }
+
+/* HEADER */
+header { flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 16px; height:52px; background:var(--surf); border-bottom:1px solid var(--border); z-index:10; gap:10px; }
+.logo { font-family:var(--head); font-weight:800; font-size:1.2rem; letter-spacing:-0.02em; flex-shrink:0; }
+.logo em { font-style:normal; color:var(--accent); }
+.header-right { display:flex; align-items:center; gap:8px; }
+.score-badge { display:flex; align-items:center; gap:6px; background:rgba(255,184,48,0.1); border:1px solid rgba(255,184,48,0.35); border-radius:999px; padding:4px 11px; font-size:0.68rem; font-weight:700; letter-spacing:0.06em; color:var(--amber); transition:transform 0.15s; }
+.score-badge.bump { transform:scale(1.18); }
+.pill { display:flex; align-items:center; gap:6px; font-size:0.62rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); border:1px solid var(--border2); padding:4px 10px; border-radius:999px; transition:color 0.35s,border-color 0.35s; white-space:nowrap; }
+.pill.on  { color:var(--green); border-color:var(--green); }
+.pill.err { color:var(--warn);  border-color:var(--warn); }
+.dot { width:6px; height:6px; border-radius:50%; background:currentColor; flex-shrink:0; }
+.pill.on .dot { animation:blink 1.6s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
+
+/* MAP */
+#map-wrap { flex-shrink:0; position:relative; height:52dvh; min-height:240px; background:#0d1520; }
+#viewDiv { width:100%; height:100%; padding:0; margin:0; }
+.map-placeholder { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; background:#0d1520; z-index:400; transition:opacity 0.45s; pointer-events:none; }
+.map-placeholder.gone { opacity:0; }
+.map-placeholder svg { opacity:0.22; }
+.map-placeholder p { font-size:0.7rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); text-align:center; line-height:2; }
+.map-loading { position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(13,21,32,0.7); z-index:410; flex-direction:column; gap:12px; }
+.map-loading.show { display:flex; }
+.map-loading p { font-size:0.68rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); }
+.map-spin { width:28px; height:28px; border:2.5px solid rgba(61,168,255,0.2); border-top-color:var(--accent); border-radius:50%; animation:rot 0.8s linear infinite; }
+@keyframes rot { to { transform:rotate(360deg); } }
+.esri-ui-corner { gap:6px; }
+.esri-widget { font-family:var(--mono) !important; }
+
+/* PANEL */
+#panel { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; background:var(--bg); padding:18px 18px 0; display:flex; flex-direction:column; gap:14px; }
+.section-lbl { font-size:0.6rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+.coord-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.ccard { background:var(--surf2); border:1px solid var(--border); border-top:2.5px solid transparent; border-radius:10px; padding:13px 13px 11px; transition:border-top-color 0.4s; }
+.ccard.lat.lit { border-top-color:var(--accent); }
+.ccard.lng.lit { border-top-color:var(--green); }
+.clbl { font-size:0.58rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); margin-bottom:5px; }
+.cval { font-size:1.2rem; font-weight:700; color:var(--muted); word-break:break-all; line-height:1.15; transition:color 0.4s; }
+.ccard.lat.lit .cval { color:var(--accent); }
+.ccard.lng.lit .cval { color:var(--green); }
+.cdms { font-size:0.58rem; color:var(--muted); margin-top:5px; opacity:0.7; line-height:1.4; }
+.copy-row { display:none; gap:8px; }
+.copy-row.show { display:flex; }
+.copy-btn { flex:1; display:flex; align-items:center; justify-content:center; gap:7px; background:var(--surf); border:1px solid var(--border2); border-radius:8px; color:var(--muted); font-family:var(--mono); font-size:0.65rem; letter-spacing:0.08em; text-transform:uppercase; padding:11px; cursor:pointer; touch-action:manipulation; -webkit-user-select:none; user-select:none; transition:color 0.2s,border-color 0.2s; }
+.copy-btn:active { opacity:0.65; }
+.copy-btn.ok { color:var(--green); border-color:var(--green); }
+.err-box { background:rgba(255,157,61,0.08); border:1px solid rgba(255,157,61,0.3); border-radius:8px; padding:12px 14px; font-size:0.73rem; color:var(--warn); line-height:1.65; display:none; }
+.err-box.show { display:block; }
+.panel-spacer { height:90px; flex-shrink:0; }
+
+/* STICKY BUTTON */
+#btn-wrap { flex-shrink:0; padding:12px 18px calc(12px + var(--safe-bot)); background:var(--bg); border-top:1px solid var(--border); }
+#loc-btn { width:100%; height:56px; display:flex; align-items:center; justify-content:center; gap:10px; background:transparent; border:1.5px solid var(--accent); border-radius:12px; color:var(--accent); font-family:var(--mono); font-size:0.85rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; touch-action:manipulation; -webkit-user-select:none; user-select:none; transition:background 0.15s,opacity 0.2s; }
+#loc-btn:active:not(:disabled) { background:rgba(61,168,255,0.1); }
+#loc-btn:disabled { opacity:0.35; }
+.btn-spin { width:16px; height:16px; border:2px solid rgba(61,168,255,0.22); border-top-color:var(--accent); border-radius:50%; animation:rot 0.7s linear infinite; display:none; flex-shrink:0; }
+#loc-btn.busy .btn-spin { display:block; }
+#loc-btn.busy #btn-label { opacity:0.5; }
+
+/* GLOBE MODAL */
+#modal-overlay { position:fixed; inset:0; background:rgba(7,11,17,0.78); z-index:2000; display:flex; align-items:flex-end; opacity:0; pointer-events:none; transition:opacity 0.3s; -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); }
+#modal-overlay.open { opacity:1; pointer-events:all; }
+#modal-card { width:100%; background:var(--surf); border-top:1px solid var(--border2); border-radius:20px 20px 0 0; padding:28px 24px calc(28px + var(--safe-bot)); display:flex; flex-direction:column; align-items:center; gap:14px; transform:translateY(100%); transition:transform 0.35s cubic-bezier(0.32,0.72,0,1); }
+#modal-overlay.open #modal-card { transform:translateY(0); }
+.modal-handle { width:36px; height:4px; background:var(--border2); border-radius:2px; margin-bottom:6px; }
+.modal-globe-icon { width:72px; height:72px; background:rgba(255,184,48,0.1); border:1.5px solid rgba(255,184,48,0.4); border-radius:50%; display:flex; align-items:center; justify-content:center; animation:globe-pulse 2s ease-in-out infinite; }
+@keyframes globe-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(255,184,48,0.35)}50%{box-shadow:0 0 0 14px rgba(255,184,48,0)} }
+.modal-title { font-family:var(--head); font-weight:800; font-size:1.55rem; letter-spacing:-0.02em; color:var(--text); text-align:center; }
+.modal-title em { font-style:normal; color:var(--amber); }
+.modal-sub { font-size:0.72rem; letter-spacing:0.06em; color:var(--muted); text-align:center; line-height:1.8; }
+.modal-dist { background:var(--surf2); border:1px solid var(--border); border-radius:8px; padding:10px 20px; font-size:0.75rem; color:var(--muted); letter-spacing:0.08em; }
+.modal-dist strong { color:var(--amber); font-size:0.95rem; }
+#ar-btn { width:100%; height:58px; display:flex; align-items:center; justify-content:center; gap:10px; background:var(--amber); border:none; border-radius:12px; color:#0b0f14; font-family:var(--mono); font-size:0.85rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; touch-action:manipulation; -webkit-user-select:none; user-select:none; margin-top:4px; transition:opacity 0.15s,transform 0.1s; }
+#ar-btn:active { opacity:0.85; transform:scale(0.98); }
+#dismiss-btn { background:none; border:none; color:var(--muted); font-family:var(--mono); font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; touch-action:manipulation; padding:8px 16px; }
+#dismiss-btn:active { opacity:0.5; }
+
+/* SCORE TOAST */
+#score-toast { position:fixed; top:70px; left:50%; transform:translateX(-50%) translateY(-20px); background:rgba(255,184,48,0.12); border:1px solid rgba(255,184,48,0.45); border-radius:999px; padding:8px 22px; font-size:0.78rem; font-weight:700; letter-spacing:0.06em; color:var(--amber); z-index:3000; opacity:0; pointer-events:none; transition:opacity 0.25s,transform 0.25s; white-space:nowrap; }
+#score-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* AR VIEWER */
+#ar-viewer { position:fixed; inset:0; z-index:4000; display:flex; flex-direction:column; background:#000; transform:translateY(100%); transition:transform 0.35s cubic-bezier(0.32,0.72,0,1); }
+#ar-viewer.open { transform:translateY(0); }
+#ar-header { flex-shrink:0; height:52px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; background:var(--surf); border-bottom:1px solid var(--border); padding-top:var(--safe-top); }
+#ar-title { display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:0.75rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--amber); }
+#ar-close-btn { background:var(--amber); border:none; border-radius:8px; color:#0b0f14; font-family:var(--mono); font-size:0.72rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; padding:9px 16px; cursor:pointer; touch-action:manipulation; -webkit-user-select:none; user-select:none; }
+#ar-close-btn:active { opacity:0.8; }
+#ar-iframe { flex:1; width:100%; border:none; background:#000; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Geo<em>Locate</em></div>
+  <div class="header-right">
+    <div class="score-badge" id="score-badge">&#9733; <span id="score-num">0</span></div>
+    <div class="pill" id="pill"><div class="dot"></div><span id="pill-txt">Loading map&#8230;</span></div>
+  </div>
+</header>
+
+<div id="map-wrap">
+  <div id="viewDiv"></div>
+  <div class="map-placeholder" id="placeholder">
+    <svg width="46" height="46" viewBox="0 0 48 48" fill="none">
+      <circle cx="24" cy="24" r="22" stroke="#3da8ff" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <circle cx="24" cy="24" r="5" fill="#3da8ff" opacity="0.6"/>
+      <line x1="24" y1="2" x2="24" y2="14" stroke="#3da8ff" stroke-width="1.5"/>
+      <line x1="24" y1="34" x2="24" y2="46" stroke="#3da8ff" stroke-width="1.5"/>
+      <line x1="2" y1="24" x2="14" y2="24" stroke="#3da8ff" stroke-width="1.5"/>
+      <line x1="34" y1="24" x2="46" y2="24" stroke="#3da8ff" stroke-width="1.5"/>
+    </svg>
+    <p>Loading web map&#8230;</p>
+  </div>
+  <div class="map-loading" id="map-loading">
+    <div class="map-spin"></div>
+    <p>Plotting your position</p>
+  </div>
+</div>
+
+<div id="panel">
+  <div>
+    <div class="section-lbl">Coordinates</div>
+    <div class="coord-row">
+      <div class="ccard lat" id="cc-lat"><div class="clbl">Latitude</div><div class="cval" id="lat-val">&#8212;</div><div class="cdms" id="lat-dms"></div></div>
+      <div class="ccard lng" id="cc-lng"><div class="clbl">Longitude</div><div class="cval" id="lng-val">&#8212;</div><div class="cdms" id="lng-dms"></div></div>
+    </div>
+  </div>
+  <div class="copy-row" id="copy-row">
+    <button class="copy-btn" id="copy-dec" onclick="copyDec()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      Copy decimal
+    </button>
+    <button class="copy-btn" id="copy-dms" onclick="copyDMS()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      Copy DMS
+    </button>
+  </div>
+  <div class="err-box" id="err-box"></div>
+  <div class="panel-spacer"></div>
+</div>
+
+<div id="btn-wrap">
+  <button id="loc-btn" onclick="startTracking()" disabled>
+    <div class="btn-spin"></div>
+    <span id="btn-label">Loading map&#8230;</span>
+  </button>
+</div>
+
+<!-- GLOBE MODAL -->
+<div id="modal-overlay" role="dialog" aria-modal="true">
+  <div id="modal-card">
+    <div class="modal-handle"></div>
+    <div class="modal-globe-icon">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+        <circle cx="18" cy="18" r="15" stroke="#ffb830" stroke-width="1.5"/>
+        <ellipse cx="18" cy="18" rx="7" ry="15" stroke="#ffb830" stroke-width="1.2"/>
+        <line x1="3" y1="18" x2="33" y2="18" stroke="#ffb830" stroke-width="1.2"/>
+        <path d="M5 10 Q18 14 31 10" stroke="#ffb830" stroke-width="1" fill="none"/>
+        <path d="M5 26 Q18 22 31 26" stroke="#ffb830" stroke-width="1" fill="none"/>
+      </svg>
+    </div>
+    <div class="modal-title"><em>Globe</em> detected!</div>
+    <div class="modal-sub" id="modal-target-name"></div>
+    <div class="modal-dist" id="modal-dist"></div>
+    <button id="ar-btn" onclick="launchAR()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      Launch AR Object
+    </button>
+    <button id="dismiss-btn" onclick="dismissModal()">Dismiss</button>
+  </div>
+</div>
+
+<!-- SCORE TOAST -->
+<div id="score-toast"></div>
+
+<!-- AR VIEWER -->
+<div id="ar-viewer">
+  <div id="ar-header">
+    <div id="ar-title">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffb830" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      AR Object
+    </div>
+    <button id="ar-close-btn" onclick="closeAR()">&#10003;&nbsp; Done &#8212; Collect Globe</button>
+  </div>
+  <iframe id="ar-iframe" src="" allowfullscreen allow="autoplay; fullscreen; xr-spatial-tracking" frameborder="0"></iframe>
+</div>
+
+<script src="https://js.arcgis.com/4.29/"></script>
+<script>
+/* ══════════════════════════════════════════
+   CONFIGURATION
+   ══════════════════════════════════════════ */
+const AR_URL = "https://sketchfab.com/models/cbbe1e1ae71b4e44acc6bf1b5245f1bb/embed";
+
+const TARGETS = [
+  { name: "Globe #1", lat: 38.912281, lng: -94.613686 },
+  // more targets coming...
+];
+
+const TRIGGER_DISTANCE_M = 50;
+const WEB_MAP_ID = "359e7e596f6745558679fc9962d7ab72";
+/* ══════════════════════════════════════════ */
+
+let view            = null;
+let userGraphic     = null;
+let accuracyGraphic = null;
+let watchId         = null;
+let lastLat         = null, lastLng = null;
+let lastDMSlat      = '',   lastDMSlng = '';
+let score           = 0;
+let foundTargets    = new Set();
+let arPending       = false;
+let activeTarget    = null;
+
+/* Haversine distance in metres */
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371000, r = d => d * Math.PI / 180;
+  const dLat = r(lat2-lat1), dLng = r(lng2-lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(r(lat1))*Math.cos(r(lat2))*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+/* Proximity check on every GPS update */
+function checkProximity(lat, lng) {
+  for (let i = 0; i < TARGETS.length; i++) {
+    if (foundTargets.has(i)) continue;
+    const d = haversine(lat, lng, TARGETS[i].lat, TARGETS[i].lng);
+    if (d <= TRIGGER_DISTANCE_M) {
+      showModal(TARGETS[i], i, Math.round(d));
+      return;
+    }
+  }
+}
+
+/* Modal */
+function showModal(target, idx, distM) {
+  activeTarget = { target, idx };
+  document.getElementById('modal-target-name').textContent = target.name;
+  document.getElementById('modal-dist').innerHTML =
+    'You are <strong>' + distM + ' m</strong> from this globe';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function dismissModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  activeTarget = null;
+}
+
+/* Launch AR — inline iframe */
+function launchAR() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.getElementById('ar-iframe').src = AR_URL;
+  document.getElementById('ar-viewer').classList.add('open');
+  arPending = true;
+}
+
+/* Close AR viewer and credit score */
+function closeAR() {
+  document.getElementById('ar-viewer').classList.remove('open');
+  document.getElementById('ar-iframe').src = '';
+  if (arPending && activeTarget !== null) {
+    arPending = false;
+    foundTargets.add(activeTarget.idx);
+    score++;
+    updateScore();
+    showToast('+1  ' + activeTarget.target.name + ' found!');
+    activeTarget = null;
+  }
+}
+
+function updateScore() {
+  document.getElementById('score-num').textContent = score;
+  const b = document.getElementById('score-badge');
+  b.classList.add('bump');
+  setTimeout(() => b.classList.remove('bump'), 300);
+}
+function showToast(msg) {
+  const t = document.getElementById('score-toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ArcGIS SDK */
+require([
+  "esri/WebMap",
+  "esri/views/MapView",
+  "esri/Graphic",
+  "esri/geometry/Point",
+  "esri/geometry/geometryEngine",
+  "esri/symbols/SimpleMarkerSymbol",
+  "esri/symbols/SimpleFillSymbol",
+  "esri/symbols/SimpleLineSymbol",
+  "esri/widgets/Zoom"
+], function(WebMap, MapView, Graphic, Point, geometryEngine,
+            SimpleMarkerSymbol, SimpleFillSymbol, SimpleLineSymbol, Zoom) {
+
+  const webmap = new WebMap({ portalItem: { id: WEB_MAP_ID } });
+  view = new MapView({ container: "viewDiv", map: webmap, ui: { components: [] } });
+  view.ui.add(new Zoom({ view }), "bottom-right");
+
+  view.when(() => {
+    document.getElementById('placeholder').classList.add('gone');
+    setPill('on', 'Map ready');
+    document.getElementById('loc-btn').disabled = false;
+    document.getElementById('btn-label').textContent = '\u2295\u00a0 Locate Me';
+
+    /* Amber target markers */
+    TARGETS.forEach(t => {
+      view.graphics.add(new Graphic({
+        geometry: new Point({ latitude: t.lat, longitude: t.lng }),
+        symbol: new SimpleMarkerSymbol({
+          style: 'circle', color: [255,184,48,0.9], size: 12,
+          outline: { color: [255,255,255,0.7], width: 1.5 }
+        }),
+        popupTemplate: {
+          title: t.name,
+          content: 'Lat: ' + t.lat + '&#176;, Lng: ' + t.lng + '&#176;'
+        }
+      }));
+    });
+
+  }).catch(() => {
+    setPill('err', 'Map error');
+    showErr('Failed to load ArcGIS web map.');
+  });
+
+  window._plotPosition = function(lat, lng, acc) {
+    const pt = new Point({ latitude: lat, longitude: lng });
+    if (userGraphic)     view.graphics.remove(userGraphic);
+    if (accuracyGraphic) view.graphics.remove(accuracyGraphic);
+
+    accuracyGraphic = new Graphic({
+      geometry: geometryEngine.geodesicBuffer(pt, acc, 'meters'),
+      symbol: new SimpleFillSymbol({
+        color: [61,168,255,0.07],
+        outline: new SimpleLineSymbol({ color:[61,168,255,0.55], width:1, style:'dash' })
+      })
+    });
+    userGraphic = new Graphic({
+      geometry: pt,
+      symbol: new SimpleMarkerSymbol({
+        style:'circle', color:[61,168,255,1], size:14,
+        outline: { color:[255,255,255,0.9], width:2 }
+      }),
+      popupTemplate: {
+        title: 'You are here',
+        content: 'Lat: ' + lat.toFixed(6) + '&#176;<br>Lng: ' + lng.toFixed(6) + '&#176;<br>Accuracy: &#177;' + Math.round(acc) + ' m'
+      }
+    });
+    view.graphics.addMany([accuracyGraphic, userGraphic]);
+    view.goTo({ target: pt, zoom: 15 }, { duration: 900, easing: 'ease-in-out' });
+    document.getElementById('map-loading').classList.remove('show');
+  };
+});
+
+/* DMS */
+function toDMS(d, pos, neg) {
+  const dir = d >= 0 ? pos : neg, a = Math.abs(d), deg = Math.floor(a);
+  const mf = (a-deg)*60, min = Math.floor(mf), sec = ((mf-min)*60).toFixed(1);
+  return deg + '\u00b0 ' + min + '\' ' + sec + '" ' + dir;
+}
+
+/* Copy */
+function copyDec() { navigator.clipboard.writeText(lastLat.toFixed(7)+', '+lastLng.toFixed(7)).then(()=>flash('copy-dec')); }
+function copyDMS() { navigator.clipboard.writeText(lastDMSlat+', '+lastDMSlng).then(()=>flash('copy-dms')); }
+function flash(id) {
+  const b = document.getElementById(id), orig = b.innerHTML;
+  b.classList.add('ok'); b.textContent = 'Copied!';
+  setTimeout(() => { b.classList.remove('ok'); b.innerHTML = orig; }, 1600);
+}
+
+/* Tracking */
+function startTracking() {
+  if (!navigator.geolocation) return fail('Geolocation not supported.');
+  const btn = document.getElementById('loc-btn');
+  btn.classList.add('busy');
+  document.getElementById('btn-label').textContent = 'Acquiring signal\u2026';
+  setPill('', 'Locating');
+  document.getElementById('err-box').classList.remove('show');
+  document.getElementById('map-loading').classList.add('show');
+  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+
+  watchId = navigator.geolocation.watchPosition(pos => {
+    const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+    lastLat = lat; lastLng = lng;
+    lastDMSlat = toDMS(lat,'N','S'); lastDMSlng = toDMS(lng,'E','W');
+
+    document.getElementById('lat-val').textContent = lat.toFixed(7) + '\u00b0';
+    document.getElementById('lng-val').textContent = lng.toFixed(7) + '\u00b0';
+    document.getElementById('lat-dms').textContent = lastDMSlat;
+    document.getElementById('lng-dms').textContent = lastDMSlng;
+    document.getElementById('cc-lat').classList.add('lit');
+    document.getElementById('cc-lng').classList.add('lit');
+    document.getElementById('copy-row').classList.add('show');
+
+    setPill('on', 'Tracking');
+    if (window._plotPosition) window._plotPosition(lat, lng, accuracy);
+    else document.getElementById('map-loading').classList.remove('show');
+
+    btn.classList.remove('busy');
+    document.getElementById('btn-label').textContent = '\u21ba\u00a0 Restart Tracking';
+    btn.disabled = false;
+
+    checkProximity(lat, lng);
+
+  }, e => {
+    const msgs = ['','Permission denied.','Position unavailable.','Request timed out.'];
+    fail(msgs[e.code] || 'Location error.');
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+}
+
+function fail(msg) {
+  const btn = document.getElementById('loc-btn');
+  btn.disabled = false; btn.classList.remove('busy');
+  document.getElementById('btn-label').textContent = '\u2295\u00a0 Retry';
+  setPill('err', 'Error');
+  document.getElementById('map-loading').classList.remove('show');
+  showErr(msg);
+}
+function setPill(cls, txt) {
+  document.getElementById('pill').className = 'pill' + (cls ? ' '+cls : '');
+  document.getElementById('pill-txt').textContent = txt;
+}
+function showErr(msg) {
+  const e = document.getElementById('err-box');
+  e.textContent = msg; e.classList.add('show');
+}
+</script>
+</body>
+</html>
