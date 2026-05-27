@@ -123,6 +123,38 @@ header { flex-shrink:0; display:flex; align-items:center; justify-content:space-
 #ar-close-btn { background:var(--amber); border:none; border-radius:8px; color:#0b0f14; font-family:var(--mono); font-size:0.72rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; padding:9px 16px; cursor:pointer; touch-action:manipulation; -webkit-user-select:none; user-select:none; }
 #ar-close-btn:active { opacity:0.8; }
 #ar-iframe { flex:1; width:100%; border:none; background:#000; }
+
+/* AR hint banner */
+#ar-hint {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: linear-gradient(0deg, rgba(11,15,20,0.97) 0%, rgba(11,15,20,0.7) 80%, transparent 100%);
+  padding: 28px 20px calc(20px + var(--safe-bot));
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  z-index: 10; pointer-events: none;
+  animation: hint-fade 0.5s ease 1.2s both;
+}
+#ar-hint.hidden { display: none; }
+@keyframes hint-fade { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+.ar-hint-badge {
+  display: flex; align-items: center; gap: 9px;
+  background: rgba(255,184,48,0.12);
+  border: 1px solid rgba(255,184,48,0.4);
+  border-radius: 999px; padding: 8px 16px;
+  font-size: 0.7rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--amber);
+  pointer-events: none;
+}
+.ar-hint-icon {
+  width: 28px; height: 28px;
+  background: var(--amber);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.ar-hint-text { font-size: 0.72rem; color: var(--text); line-height: 1.6; text-align: center; }
+.ar-hint-text strong { color: var(--amber); }
 </style>
 </head>
 <body>
@@ -220,6 +252,17 @@ header { flex-shrink:0; display:flex; align-items:center; justify-content:space-
     <button id="ar-close-btn" onclick="closeAR()">&#10003;&nbsp; Done &#8212; Collect Globe</button>
   </div>
   <iframe id="ar-iframe" src="" allowfullscreen allow="autoplay; fullscreen; xr-spatial-tracking" frameborder="0"></iframe>
+  <div id="ar-hint">
+    <div class="ar-hint-badge">
+      <div class="ar-hint-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0b0f14" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+      </div>
+      Tap the AR cube in the viewer
+    </div>
+    <div class="ar-hint-text">
+      Tap the <strong>AR button</strong> inside the 3D viewer below<br>to place the globe in your real world surroundings
+    </div>
+  </div>
 </div>
 
 <script src="https://js.arcgis.com/4.29/"></script>
@@ -227,7 +270,7 @@ header { flex-shrink:0; display:flex; align-items:center; justify-content:space-
 /* ══════════════════════════════════════════
    CONFIGURATION
    ══════════════════════════════════════════ */
-const AR_URL = "https://sketchfab.com/models/cbbe1e1ae71b4e44acc6bf1b5245f1bb/embed";
+const AR_URL = "https://sketchfab.com/models/cbbe1e1ae71b4e44acc6bf1b5245f1bb/embed?ar=1&ui_ar=1&ui_controls=1&ui_infos=0&ui_watermark=0&ui_hint=0";
 
 const TARGETS = [
   { name: "Globe #1", lat: 38.912281, lng: -94.613686 },
@@ -287,6 +330,11 @@ function launchAR() {
   document.getElementById('modal-overlay').classList.remove('open');
   document.getElementById('ar-iframe').src = AR_URL;
   document.getElementById('ar-viewer').classList.add('open');
+  // Show hint, then fade after 7s
+  const hint = document.getElementById('ar-hint');
+  hint.classList.remove('hidden');
+  clearTimeout(window._hintTimer);
+  window._hintTimer = setTimeout(() => hint.classList.add('hidden'), 7000);
   arPending = true;
 }
 
