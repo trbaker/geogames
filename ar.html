@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0b0f14">
-<title>GeoLocate</title>
+<title>Globie Hunt</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/dark/main.css">
@@ -242,10 +242,10 @@ header { flex-shrink:0; display:flex; align-items:center; justify-content:space-
 <body>
 
 <header>
-  <div class="logo">Geo<em>Locate</em></div>
+  <div class="logo">Globie<em> Hunt</em></div>
   <div class="header-right">
     <button id="trophy-btn" onclick="openLeaderboard()" aria-label="Leaderboard"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffb830" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4a2 2 0 00-2 2v1a4 4 0 004 4h.5"/><path d="M18 9h2a2 2 0 012 2v1a4 4 0 01-4 4h-.5"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M6 3h12l1 6a7 7 0 01-14 0L6 3z"/></svg></button><div class="score-badge" id="score-badge" onclick="openScorecard()" role="button">&#9733; <span id="score-num">0</span></div>
-    <div class="pill" id="pill"><div class="dot"></div><span id="pill-txt">Loading map&#8230;</span></div>
+    <div class="pill" id="pill"><div class="dot"></div><span id="pill-txt">Start Tracking</span></div>
   </div>
 </header>
 
@@ -281,9 +281,9 @@ header { flex-shrink:0; display:flex; align-items:center; justify-content:space-
 </div>
 
 <div id="btn-wrap">
-  <button id="loc-btn" onclick="toggleTracking()" disabled>
+  <button id="loc-btn" onclick="toggleTracking()">
     <div class="btn-spin"></div>
-    <span id="btn-label">Loading map&#8230;</span>
+    <span id="btn-label">Start Tracking</span>
   </button>
 </div>
 
@@ -539,70 +539,67 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-/* ArcGIS */
-require([
-  "esri/WebMap","esri/views/MapView","esri/Graphic","esri/geometry/Point",
-  "esri/geometry/geometryEngine","esri/symbols/SimpleMarkerSymbol",
-  "esri/symbols/SimpleFillSymbol","esri/symbols/SimpleLineSymbol","esri/widgets/Zoom"
-], function(WebMap,MapView,Graphic,Point,geometryEngine,
-            SimpleMarkerSymbol,SimpleFillSymbol,SimpleLineSymbol,Zoom) {
-  const webmap = new WebMap({ portalItem: { id: WEB_MAP_ID } });
-  view = new MapView({ container:"viewDiv", map:webmap, ui:{ components:[] } });
-  view.ui.add(new Zoom({ view }), "bottom-right");
+/* Enable button immediately — independent of ArcGIS SDK load */
+function enableBtn() {
+  const btn = document.getElementById('loc-btn');
+  btn.disabled = false;
+  document.getElementById('btn-label').textContent = '⊕  Start Tracking';
+}
+enableBtn();
 
-  // Enable the tracking button immediately — don't wait on the map
-  function enableBtn() {
-    document.getElementById('loc-btn').disabled = false;
-    document.getElementById('btn-label').textContent = '\u2295\u00a0 Start Tracking';
-  }
+/* ArcGIS — loads asynchronously; map is a bonus, not a blocker */
+if (typeof require !== 'undefined') {
+  require([
+    "esri/WebMap","esri/views/MapView","esri/Graphic","esri/geometry/Point",
+    "esri/geometry/geometryEngine","esri/symbols/SimpleMarkerSymbol",
+    "esri/symbols/SimpleFillSymbol","esri/symbols/SimpleLineSymbol","esri/widgets/Zoom"
+  ], function(WebMap,MapView,Graphic,Point,geometryEngine,
+              SimpleMarkerSymbol,SimpleFillSymbol,SimpleLineSymbol,Zoom) {
 
-  // Fallback: enable after 4 s even if map hasn't resolved
-  const btnFallback = setTimeout(() => {
-    enableBtn();
-    setPill('', 'Map loading\u2026');
-  }, 4000);
+    const webmap = new WebMap({ portalItem: { id: WEB_MAP_ID } });
+    view = new MapView({ container:"viewDiv", map:webmap, ui:{ components:[] } });
+    view.ui.add(new Zoom({ view }), "bottom-right");
 
-  view.when(() => {
-    clearTimeout(btnFallback);
-    document.getElementById('placeholder').classList.add('gone');
-    setPill('on', 'Map ready');
-    enableBtn();
-    TARGETS.forEach(t => {
-      view.graphics.add(new Graphic({
-        geometry: new Point({ latitude:t.lat, longitude:t.lng }),
-        symbol: new SimpleMarkerSymbol({ style:'circle', color:[255,184,48,0.9], size:12, outline:{color:[255,255,255,0.7],width:1.5} }),
-        popupTemplate: { title:t.name, content:'Lat: '+t.lat+'\u00b0, Lng: '+t.lng+'\u00b0' }
-      }));
+    view.when(() => {
+      document.getElementById('placeholder').classList.add('gone');
+      setPill('on', 'Map ready');
+      TARGETS.forEach(t => {
+        view.graphics.add(new Graphic({
+          geometry: new Point({ latitude:t.lat, longitude:t.lng }),
+          symbol: new SimpleMarkerSymbol({ style:'circle', color:[255,184,48,0.9], size:12, outline:{color:[255,255,255,0.7],width:1.5} }),
+          popupTemplate: { title:t.name, content:'Lat: '+t.lat+'°, Lng: '+t.lng+'°' }
+        }));
+      });
+    }).catch(err => {
+      console.warn('WebMap load error:', err);
+      setPill('err', 'Map error');
+      document.getElementById('placeholder').querySelector('p').textContent = 'Map unavailable — tracking still works.';
     });
-  }).catch(err => {
-    clearTimeout(btnFallback);
-    console.warn('WebMap load error:', err);
-    setPill('err', 'Map error');
-    document.getElementById('placeholder').querySelector('p').textContent = 'Map unavailable — tracking still works.';
-    enableBtn();  // still let the user track even if the map failed
+
+    window._plotPosition = function(lat, lng, acc) {
+      const pt = new Point({ latitude:lat, longitude:lng });
+      if (userGraphic)     view.graphics.remove(userGraphic);
+      if (accuracyGraphic) view.graphics.remove(accuracyGraphic);
+      accuracyGraphic = new Graphic({
+        geometry: geometryEngine.geodesicBuffer(pt, acc, 'meters'),
+        symbol: new SimpleFillSymbol({ color:[61,168,255,0.07], outline:new SimpleLineSymbol({color:[61,168,255,0.55],width:1,style:'dash'}) })
+      });
+      userGraphic = new Graphic({
+        geometry: pt,
+        symbol: new SimpleMarkerSymbol({ style:'circle', color:[61,168,255,1], size:14, outline:{color:[255,255,255,0.9],width:2} }),
+        popupTemplate: { title:'You are here', content:'Lat: '+lat.toFixed(6)+'°<br>Lng: '+lng.toFixed(6)+'°<br>Accuracy: ±'+Math.round(acc)+' m' }
+      });
+      view.graphics.addMany([accuracyGraphic, userGraphic]);
+      if (!mapCentered) {
+        view.goTo({ target:pt, zoom:15 }, { duration:900, easing:'ease-in-out' });
+        mapCentered = true;
+      }
+      document.getElementById('map-loading').classList.remove('show');
+    };
   });
-
-  window._plotPosition = function(lat, lng, acc) {
-    const pt = new Point({ latitude:lat, longitude:lng });
-    if (userGraphic) view.graphics.remove(userGraphic);
-    if (accuracyGraphic) view.graphics.remove(accuracyGraphic);
-    accuracyGraphic = new Graphic({
-      geometry: geometryEngine.geodesicBuffer(pt, acc, 'meters'),
-      symbol: new SimpleFillSymbol({ color:[61,168,255,0.07], outline:new SimpleLineSymbol({color:[61,168,255,0.55],width:1,style:'dash'}) })
-    });
-    userGraphic = new Graphic({
-      geometry: pt,
-      symbol: new SimpleMarkerSymbol({ style:'circle', color:[61,168,255,1], size:14, outline:{color:[255,255,255,0.9],width:2} }),
-      popupTemplate: { title:'You are here', content:'Lat: '+lat.toFixed(6)+'\u00b0<br>Lng: '+lng.toFixed(6)+'\u00b0<br>Accuracy: \u00b1'+Math.round(acc)+' m' }
-    });
-    view.graphics.addMany([accuracyGraphic, userGraphic]);
-    if (!mapCentered) {
-      view.goTo({ target:pt, zoom:15 }, { duration:900, easing:'ease-in-out' });
-      mapCentered = true;
-    }
-    document.getElementById('map-loading').classList.remove('show');
-  };
-});
+} else {
+  setPill('err', 'SDK unavailable');
+}
 
 /* DMS */
 function toDMS(d, pos, neg) {
