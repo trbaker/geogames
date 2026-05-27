@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>AR Location Viewer</title>
+
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <!-- AR.js location-only build -->
+  <script src="https://unpkg.com/@ar-js-org/ar.js@3.4.5/aframe/build/aframe-ar-location-only.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
+
+    :root {
+      --bg:      #060810;
+      --surface: #0d1117;
+      --border:  #1e2a3a;
+      --accent:  #00f5a0;
+      --accent2: #00b4ff;
+      --warn:    #ff6b35;
+      --text:    #e2e8f0;
+      --muted:   #6b7a8d;
+      --glow:    0 0 20px rgba(0,245,160,0.3);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── CONFIG SCREEN ── */
+    #config-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      gap: 0;
+      overflow-y: auto;
+    }
+
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(28px, 8vw, 48px);
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 4px;
+    }
+
+    .tagline {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 36px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .field input, .field select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .field input:focus, .field select:focus {
+      border-color: var(--accent);
+      box-shadow: var(--glow);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .object-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .obj-btn {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 8px;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .obj-btn span { font-size: 22px; }
+
+    .obj-btn.active, .obj-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: var(--glow);
+    }
+
+    .use-location-btn {
+      width: 100%;
+      background: transparent;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      color: var(--accent2);
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      margin-top: 4px;
+      transition: all 0.2s;
+    }
+
+    .use-location-btn:hover {
+      border-color: var(--accent2);
+      background: rgba(0,180,255,0.05);
+    }
+
+    .launch-btn {
+      width: 100%;
+      max-width: 420px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      border-radius: 12px;
+      padding: 18px;
+      color: #000;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 16px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform 0.15s, opacity 0.15s;
+      margin-top: 4px;
+    }
+
+    .launch-btn:hover { transform: translateY(-2px); opacity: 0.9; }
+    .launch-btn:active { transform: scale(0.98); }
+
+    /* ── AR OVERLAY ── */
+    #ar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    #hud {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: all;
+    }
+
+    #distance-badge {
+      background: rgba(6,8,16,0.85);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 10px 16px;
+      backdrop-filter: blur(10px);
+    }
+
+    #distance-badge .label {
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    #distance-badge .value {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 22px;
+      color: var(--accent);
+      line-height: 1.1;
+    }
+
+    #distance-badge .unit {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    #close-btn {
+      background: rgba(6,8,16,0.85);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: var(--warn);
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      pointer-events: all;
+      letter-spacing: 1px;
+    }
+
+    #status-bar {
+      position: absolute;
+      bottom: 32px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .status-chip {
+      background: rgba(6,8,16,0.85);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 11px;
+      letter-spacing: 1px;
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .dot.green { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+    .dot.blue  { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
+    .dot.red   { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
+
+    .proximity-bar {
+      background: rgba(6,8,16,0.85);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      backdrop-filter: blur(10px);
+    }
+
+    .proximity-bar .bar-label {
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .bar-track {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent2), var(--accent));
+      border-radius: 2px;
+      transition: width 1s ease;
+      width: 0%;
+    }
+
+    /* ── A-FRAME canvas fix ── */
+    a-scene {
+      position: fixed !important;
+      inset: 0 !important;
+      z-index: 1 !important;
+    }
+
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════ CONFIG SCREEN ══════════ -->
+<div id="config-screen">
+  <div class="logo">AR.LOCATE</div>
+  <div class="tagline">Location-Based Augmented Reality</div>
+
+  <div class="card">
+    <div class="card-title">📍 Target Coordinates</div>
+    <div class="row">
+      <div class="field">
+        <label>Latitude</label>
+        <input type="number" id="target-lat" step="0.000001" placeholder="37.7749" value="" />
+      </div>
+      <div class="field">
+        <label>Longitude</label>
+        <input type="number" id="target-lng" step="0.000001" placeholder="-122.4194" value="" />
+      </div>
+    </div>
+    <button class="use-location-btn" id="use-location-btn">⊕ Use My Current Location as Target</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🎯 AR Object</div>
+    <div class="object-grid">
+      <button class="obj-btn active" data-shape="box" onclick="selectShape(this)"><span>📦</span>Cube</button>
+      <button class="obj-btn" data-shape="sphere" onclick="selectShape(this)"><span>🔮</span>Sphere</button>
+      <button class="obj-btn" data-shape="cone" onclick="selectShape(this)"><span>🔺</span>Cone</button>
+      <button class="obj-btn" data-shape="cylinder" onclick="selectShape(this)"><span>🛢</span>Cylinder</button>
+      <button class="obj-btn" data-shape="torus" onclick="selectShape(this)"><span>⭕</span>Torus</button>
+      <button class="obj-btn" data-shape="tetrahedron" onclick="selectShape(this)"><span>🔷</span>Gem</button>
+    </div>
+
+    <div class="row" style="margin-top:16px">
+      <div class="field">
+        <label>Color</label>
+        <input type="color" id="obj-color" value="#00f5a0" style="height:44px;padding:4px;" />
+      </div>
+      <div class="field">
+        <label>Scale (meters)</label>
+        <input type="number" id="obj-scale" value="5" min="1" max="100" step="1" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Height above ground (m)</label>
+      <input type="number" id="obj-height" value="2" min="0" max="50" step="0.5" />
+    </div>
+  </div>
+
+  <button class="launch-btn" onclick="launchAR()">LAUNCH AR →</button>
+</div>
+
+<!-- ══════════ AR OVERLAY HUD ══════════ -->
+<div id="ar-overlay">
+  <div id="hud">
+    <div id="distance-badge">
+      <div class="label">Distance to target</div>
+      <div class="value" id="dist-value">—</div>
+      <div class="unit" id="dist-unit">calculating...</div>
+    </div>
+    <button id="close-btn" onclick="closeAR()">✕ CLOSE</button>
+  </div>
+
+  <div id="status-bar">
+    <div class="proximity-bar">
+      <div class="bar-label">
+        <span>PROXIMITY</span>
+        <span id="prox-pct">0%</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" id="prox-fill"></div>
+      </div>
+    </div>
+    <div class="status-chip">
+      <div class="dot green" id="gps-dot"></div>
+      <span id="gps-status">Acquiring GPS...</span>
+    </div>
+    <div class="status-chip">
+      <div class="dot blue" id="cam-dot"></div>
+      <span id="cam-status">Camera initializing...</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ A-FRAME SCENE (built dynamically) ══════════ -->
+<div id="ar-container"></div>
+
+<script>
+  /* ── State ── */
+  let selectedShape = 'box';
+  let watchId = null;
+  let targetLat = null, targetLng = null;
+  let arScene = null;
+
+  /* ── Shape picker ── */
+  function selectShape(btn) {
+    document.querySelectorAll('.obj-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedShape = btn.dataset.shape;
+  }
+
+  /* ── Use current location as target ── */
+  document.getElementById('use-location-btn').addEventListener('click', () => {
+    const btn = document.getElementById('use-location-btn');
+    btn.textContent = '⌛ Getting location...';
+    navigator.geolocation.getCurrentPosition(pos => {
+      document.getElementById('target-lat').value = pos.coords.latitude.toFixed(6);
+      document.getElementById('target-lng').value = pos.coords.longitude.toFixed(6);
+      btn.textContent = '✓ Location set!';
+      setTimeout(() => btn.textContent = '⊕ Use My Current Location as Target', 2000);
+    }, () => {
+      btn.textContent = '⚠ Permission denied';
+      setTimeout(() => btn.textContent = '⊕ Use My Current Location as Target', 2000);
+    });
+  });
+
+  /* ── Launch AR ── */
+  function launchAR() {
+    const lat = parseFloat(document.getElementById('target-lat').value);
+    const lng = parseFloat(document.getElementById('target-lng').value);
+    if (isNaN(lat) || isNaN(lng)) {
+      alert('Please enter valid coordinates.');
+      return;
+    }
+    targetLat = lat;
+    targetLng = lng;
+
+    const color   = document.getElementById('obj-color').value;
+    const scale   = parseFloat(document.getElementById('obj-scale').value) || 5;
+    const height  = parseFloat(document.getElementById('obj-height').value) || 2;
+
+    buildARScene(lat, lng, color, scale, height);
+    document.getElementById('config-screen').style.display = 'none';
+    document.getElementById('ar-overlay').style.display = 'block';
+    startGPSWatch();
+  }
+
+  /* ── Build A-Frame scene ── */
+  function buildARScene(lat, lng, color, scale, height) {
+    // Remove old scene if any
+    const old = document.getElementById('ar-scene-root');
+    if (old) old.remove();
+
+    const shapeTag = getShapeTag(selectedShape, color, scale, height);
+
+    const container = document.getElementById('ar-container');
+    container.innerHTML = `
+      <a-scene
+        id="ar-scene-root"
+        vr-mode-ui="enabled: false"
+        embedded
+        arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false; trackingMethod: best;"
+        renderer="antialias: true; alpha: true; logarithmicDepthBuffer: true;"
+        loading-screen="enabled: false">
+
+        <a-camera
+          id="ar-camera"
+          gps-projected-camera="gpsMinDistance: 0.001"
+          rotation-reader>
+        </a-camera>
+
+        ${shapeTag}
+
+        <!-- Subtle ground ring to mark the spot -->
+        <a-ring
+          gps-projected-entity-place="latitude: ${lat}; longitude: ${lng}"
+          material="color: ${color}; opacity: 0.4; side: double"
+          position="0 0.05 0"
+          rotation="-90 0 0"
+          radius-inner="${scale * 0.6}"
+          radius-outer="${scale * 0.8}"
+          animation="property: rotation; to: -90 360 0; loop: true; dur: 6000; easing: linear">
+        </a-ring>
+
+      </a-scene>`;
+
+    // Update cam status once video starts
+    setTimeout(() => {
+      document.getElementById('cam-status').textContent = 'Camera active';
+      document.getElementById('cam-dot').className = 'dot green';
+    }, 3000);
+  }
+
+  function getShapeTag(shape, color, scale, height) {
+    const pos = `position="0 ${height} 0"`;
+    const mat = `material="color: ${color}; metalness: 0.3; roughness: 0.4; emissive: ${color}; emissiveIntensity: 0.15"`;
+    const anim = `animation="property: rotation; to: 0 360 0; loop: true; dur: 4000; easing: linear"`;
+    const anim2 = `animation__float="property: position; from: 0 ${height} 0; to: 0 ${height + 1.5} 0; dir: alternate; loop: true; dur: 2500; easing: easeInOutSine"`;
+    const gps = `gps-projected-entity-place="latitude: ${targetLat}; longitude: ${targetLng}"`;
+
+    switch (shape) {
+      case 'sphere':
+        return `<a-sphere ${gps} radius="${scale/2}" ${mat} ${pos} ${anim} ${anim2}></a-sphere>`;
+      case 'cone':
+        return `<a-cone ${gps} radius-bottom="${scale/2}" height="${scale}" ${mat} ${pos} ${anim} ${anim2}></a-cone>`;
+      case 'cylinder':
+        return `<a-cylinder ${gps} radius="${scale/2}" height="${scale}" ${mat} ${pos} ${anim} ${anim2}></a-cylinder>`;
+      case 'torus':
+        return `<a-torus ${gps} radius="${scale/2}" radius-tubular="${scale/8}" ${mat} ${pos} ${anim} ${anim2}></a-torus>`;
+      case 'tetrahedron':
+        return `<a-tetrahedron ${gps} radius="${scale/2}" ${mat} ${pos} ${anim} ${anim2}></a-tetrahedron>`;
+      default: // box
+        return `<a-box ${gps} width="${scale}" height="${scale}" depth="${scale}" ${mat} ${pos} ${anim} ${anim2}></a-box>`;
+    }
+  }
+
+  /* ── GPS Watch ── */
+  function startGPSWatch() {
+    if (!navigator.geolocation) {
+      document.getElementById('gps-status').textContent = 'GPS not supported';
+      document.getElementById('gps-dot').className = 'dot red';
+      return;
+    }
+
+    watchId = navigator.geolocation.watchPosition(pos => {
+      const { latitude, longitude, accuracy } = pos.coords;
+      const dist = haversine(latitude, longitude, targetLat, targetLng);
+
+      document.getElementById('gps-dot').className = 'dot green';
+      document.getElementById('gps-status').textContent =
+        `GPS ±${Math.round(accuracy)}m  |  ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+
+      // Distance display
+      let displayDist, unit;
+      if (dist < 1000) {
+        displayDist = Math.round(dist);
+        unit = 'meters away';
+      } else {
+        displayDist = (dist / 1000).toFixed(2);
+        unit = 'km away';
+      }
+      document.getElementById('dist-value').textContent = displayDist;
+      document.getElementById('dist-unit').textContent = unit;
+
+      // Proximity bar (max useful range = 200m)
+      const maxRange = 200;
+      const pct = Math.max(0, Math.min(100, ((maxRange - dist) / maxRange) * 100));
+      document.getElementById('prox-fill').style.width = pct + '%';
+      document.getElementById('prox-pct').textContent = Math.round(pct) + '%';
+
+      // Color pulse when close
+      if (dist < 10) {
+        document.getElementById('dist-value').style.color = '#00f5a0';
+      } else if (dist < 50) {
+        document.getElementById('dist-value').style.color = '#00b4ff';
+      } else {
+        document.getElementById('dist-value').style.color = '#00f5a0';
+      }
+
+    }, err => {
+      document.getElementById('gps-dot').className = 'dot red';
+      document.getElementById('gps-status').textContent = 'GPS error: ' + err.message;
+    }, {
+      enableHighAccuracy: true,
+      maximumAge: 1000,
+      timeout: 10000
+    });
+  }
+
+  /* ── Close AR ── */
+  function closeAR() {
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+    }
+    const old = document.getElementById('ar-scene-root');
+    if (old) old.remove();
+    document.getElementById('ar-overlay').style.display = 'none';
+    document.getElementById('config-screen').style.display = 'flex';
+  }
+
+  /* ── Haversine distance (meters) ── */
+  function haversine(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const toRad = x => x * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat/2)**2 +
+              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+</script>
+</body>
+</html>
