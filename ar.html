@@ -12,7 +12,12 @@
 <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/dark/main.css">
 
 <!-- model-viewer web component (WebXR / ARKit / ARCore) -->
-<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js">
+/* Leaderboard — stub for future implementation */
+function openLeaderboard() {
+  showToast('Leaderboard coming soon!');
+}
+</script>
 
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -77,11 +82,11 @@ header { flex-shrink:0; display:flex; align-items:center; justify-content:space-
 .ccard.lat.lit .cval { color:var(--accent); }
 .ccard.lng.lit .cval { color:var(--green); }
 .cdms { font-size:0.58rem; color:var(--muted); margin-top:5px; opacity:0.7; line-height:1.4; }
-.copy-row { display:none; gap:8px; }
-.copy-row.show { display:flex; }
-.copy-btn { flex:1; display:flex; align-items:center; justify-content:center; gap:7px; background:var(--surf); border:1px solid var(--border2); border-radius:8px; color:var(--muted); font-family:var(--mono); font-size:0.65rem; letter-spacing:0.08em; text-transform:uppercase; padding:11px; cursor:pointer; touch-action:manipulation; -webkit-user-select:none; user-select:none; transition:color 0.2s,border-color 0.2s; }
-.copy-btn:active { opacity:0.65; }
-.copy-btn.ok { color:var(--green); border-color:var(--green); }
+
+
+
+
+
 .err-box { background:rgba(255,157,61,0.08); border:1px solid rgba(255,157,61,0.3); border-radius:8px; padding:12px 14px; font-size:0.73rem; color:var(--warn); line-height:1.65; display:none; }
 .err-box.show { display:block; }
 .panel-spacer { height:90px; flex-shrink:0; }
@@ -218,6 +223,20 @@ header { flex-shrink:0; display:flex; align-items:center; justify-content:space-
 #sc-screenshot-btn { display:flex; align-items:center; gap:8px; background:var(--surf2); border:1px solid var(--border2); border-radius:8px; color:var(--text); font-family:var(--mono); font-size:0.68rem; letter-spacing:0.08em; text-transform:uppercase; padding:10px 16px; cursor:pointer; touch-action:manipulation; -webkit-user-select:none; user-select:none; transition:color 0.2s,border-color 0.2s; }
 #sc-screenshot-btn:active { opacity:0.7; }
 #sc-screenshot-btn.saving { color:var(--green); border-color:var(--green); }
+
+/* trophy button */
+#trophy-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px;
+  background: rgba(255,184,48,0.08);
+  border: 1px solid rgba(255,184,48,0.28);
+  border-radius: 8px;
+  cursor: pointer; touch-action: manipulation;
+  -webkit-user-select: none; user-select: none;
+  transition: background 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+#trophy-btn:active { background: rgba(255,184,48,0.18); border-color: var(--amber); }
 </style>
 </head>
 <body>
@@ -225,7 +244,7 @@ header { flex-shrink:0; display:flex; align-items:center; justify-content:space-
 <header>
   <div class="logo">Geo<em>Locate</em></div>
   <div class="header-right">
-    <div class="score-badge" id="score-badge" onclick="openScorecard()" role="button">&#9733; <span id="score-num">0</span></div>
+    <button id="trophy-btn" onclick="openLeaderboard()" aria-label="Leaderboard"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffb830" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4a2 2 0 00-2 2v1a4 4 0 004 4h.5"/><path d="M18 9h2a2 2 0 012 2v1a4 4 0 01-4 4h-.5"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M6 3h12l1 6a7 7 0 01-14 0L6 3z"/></svg></button><div class="score-badge" id="score-badge" onclick="openScorecard()" role="button">&#9733; <span id="score-num">0</span></div>
     <div class="pill" id="pill"><div class="dot"></div><span id="pill-txt">Loading map&#8230;</span></div>
   </div>
 </header>
@@ -257,22 +276,12 @@ header { flex-shrink:0; display:flex; align-items:center; justify-content:space-
       <div class="ccard lng" id="cc-lng"><div class="clbl">Longitude</div><div class="cval" id="lng-val">&#8212;</div><div class="cdms" id="lng-dms"></div></div>
     </div>
   </div>
-  <div class="copy-row" id="copy-row">
-    <button class="copy-btn" id="copy-dec" onclick="copyDec()">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-      Copy decimal
-    </button>
-    <button class="copy-btn" id="copy-dms" onclick="copyDMS()">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-      Copy DMS
-    </button>
-  </div>
   <div class="err-box" id="err-box"></div>
   <div class="panel-spacer"></div>
 </div>
 
 <div id="btn-wrap">
-  <button id="loc-btn" onclick="startTracking()" disabled>
+  <button id="loc-btn" onclick="toggleTracking()" disabled>
     <div class="btn-spin"></div>
     <span id="btn-label">Loading map&#8230;</span>
   </button>
@@ -393,7 +402,6 @@ header { flex-shrink:0; display:flex; align-items:center; justify-content:space-
 </div>
 
 <script src="https://js.arcgis.com/4.29/"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
 /* ══════════════════════════════════════════
    CONFIGURATION — edit these
@@ -419,12 +427,13 @@ let view            = null;
 let userGraphic     = null;
 let accuracyGraphic = null;
 let watchId         = null;
-let lastLat         = null, lastLng = null;
+let lastLat         = null, lastLng = null, lastAcc = 20;
 let lastDMSlat      = '',   lastDMSlng = '';
 let score           = 0;
 let foundTargets    = new Set();
 let arPending       = false;
 let activeTarget    = null;
+let mapCentered     = false;  // fly-to only on first fix
 
 /* Set GLB src on the model-viewer */
 const modelViewer = document.getElementById('the-model-viewer');
@@ -492,9 +501,8 @@ modelViewer.addEventListener('ar-status', (e) => {
   }
 });
 
-/* Close AR, credit score */
+/* Close AR, credit score, restore map marker */
 function closeAR() {
-  // exit AR session if active
   try { modelViewer.exitPresentAR && modelViewer.exitPresentAR(); } catch(e) {}
   document.getElementById('ar-viewer').classList.remove('open');
 
@@ -505,6 +513,17 @@ function closeAR() {
     updateScore();
     showToast('+1  ' + activeTarget.target.name + ' found!');
     activeTarget = null;
+  }
+
+  // The MapView container resizes when the AR overlay closes, which clears
+  // user graphics. Force a resize recalculation then re-plot last position.
+  if (view && lastLat !== null) {
+    view.when(() => {
+      if (view.ready) {
+        try { view.resize(); } catch(e) {}
+        window._plotPosition(lastLat, lastLng, lastAcc);
+      }
+    });
   }
 }
 
@@ -535,7 +554,7 @@ require([
     document.getElementById('placeholder').classList.add('gone');
     setPill('on','Map ready');
     document.getElementById('loc-btn').disabled = false;
-    document.getElementById('btn-label').textContent = '\u2295\u00a0 Locate Me';
+    document.getElementById('btn-label').textContent = '\u2295\u00a0 Start Tracking';
     TARGETS.forEach(t => {
       view.graphics.add(new Graphic({
         geometry: new Point({ latitude:t.lat, longitude:t.lng }),
@@ -559,7 +578,10 @@ require([
       popupTemplate: { title:'You are here', content:'Lat: '+lat.toFixed(6)+'\u00b0<br>Lng: '+lng.toFixed(6)+'\u00b0<br>Accuracy: \u00b1'+Math.round(acc)+' m' }
     });
     view.graphics.addMany([accuracyGraphic, userGraphic]);
-    view.goTo({ target:pt, zoom:15 }, { duration:900, easing:'ease-in-out' });
+    if (!mapCentered) {
+      view.goTo({ target:pt, zoom:15 }, { duration:900, easing:'ease-in-out' });
+      mapCentered = true;
+    }
     document.getElementById('map-loading').classList.remove('show');
   };
 });
@@ -570,63 +592,77 @@ function toDMS(d, pos, neg) {
   const mf=(a-deg)*60, min=Math.floor(mf), sec=((mf-min)*60).toFixed(1);
   return deg+'\u00b0 '+min+"' "+sec+'" '+dir;
 }
-function copyDec() { navigator.clipboard.writeText(lastLat.toFixed(7)+', '+lastLng.toFixed(7)).then(()=>flash('copy-dec')); }
-function copyDMS() { navigator.clipboard.writeText(lastDMSlat+', '+lastDMSlng).then(()=>flash('copy-dms')); }
-function flash(id) {
-  const b=document.getElementById(id), orig=b.innerHTML;
-  b.classList.add('ok'); b.textContent='Copied!';
-  setTimeout(()=>{ b.classList.remove('ok'); b.innerHTML=orig; },1600);
-}
+
+
+
 
 /* Tracking */
+function toggleTracking() {
+  if (watchId !== null) { stopTracking(); } else { startTracking(); }
+}
+
 function startTracking() {
   if (!navigator.geolocation) return fail('Geolocation not supported.');
   const btn = document.getElementById('loc-btn');
   btn.classList.add('busy');
-  document.getElementById('btn-label').textContent = 'Acquiring signal\u2026';
-  setPill('','Locating');
+  document.getElementById('btn-label').textContent = 'Acquiring signal…';
+  setPill('', 'Locating');
   document.getElementById('err-box').classList.remove('show');
   document.getElementById('map-loading').classList.add('show');
-  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId=null; }
 
+  mapCentered = false;  // re-center on first fix of new session
   watchId = navigator.geolocation.watchPosition(pos => {
     const { latitude:lat, longitude:lng, accuracy } = pos.coords;
-    lastLat=lat; lastLng=lng;
+    lastLat=lat; lastLng=lng; lastAcc=accuracy;
     lastDMSlat=toDMS(lat,'N','S'); lastDMSlng=toDMS(lng,'E','W');
-    document.getElementById('lat-val').textContent = lat.toFixed(7)+'\u00b0';
-    document.getElementById('lng-val').textContent = lng.toFixed(7)+'\u00b0';
+    document.getElementById('lat-val').textContent = lat.toFixed(7)+'°';
+    document.getElementById('lng-val').textContent = lng.toFixed(7)+'°';
     document.getElementById('lat-dms').textContent = lastDMSlat;
     document.getElementById('lng-dms').textContent = lastDMSlng;
     document.getElementById('cc-lat').classList.add('lit');
     document.getElementById('cc-lng').classList.add('lit');
-    document.getElementById('copy-row').classList.add('show');
-    setPill('on','Tracking');
-    if (window._plotPosition) window._plotPosition(lat,lng,accuracy);
+        setPill('on', 'Tracking');
+    if (window._plotPosition) window._plotPosition(lat, lng, accuracy);
     else document.getElementById('map-loading').classList.remove('show');
     btn.classList.remove('busy');
-    document.getElementById('btn-label').textContent = '\u21ba\u00a0 Restart Tracking';
     btn.disabled = false;
-    checkProximity(lat,lng);
+    setStopState();
+    checkProximity(lat, lng);
   }, e => {
     const msgs=['','Permission denied.','Position unavailable.','Request timed out.'];
-    fail(msgs[e.code]||'Location error.');
+    fail(msgs[e.code] || 'Location error.');
   }, { enableHighAccuracy:true, timeout:15000, maximumAge:0 });
 }
 
+function stopTracking() {
+  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  setStartState();
+  setPill('', 'Paused');
+}
+
+function setStopState() {
+  const btn = document.getElementById('loc-btn');
+  btn.style.borderColor = 'var(--warn)';
+  btn.style.color = 'var(--warn)';
+  document.getElementById('btn-label').textContent = '■  Stop Tracking';
+}
+
+function setStartState() {
+  const btn = document.getElementById('loc-btn');
+  btn.style.borderColor = 'var(--accent)';
+  btn.style.color = 'var(--accent)';
+  document.getElementById('btn-label').textContent = '⊕  Start Tracking';
+}
+
 function fail(msg) {
-  const btn=document.getElementById('loc-btn');
-  btn.disabled=false; btn.classList.remove('busy');
-  document.getElementById('btn-label').textContent='\u2295\u00a0 Retry';
-  setPill('err','Error');
+  watchId = null;
+  const btn = document.getElementById('loc-btn');
+  btn.disabled = false; btn.classList.remove('busy');
+  setStartState();
+  setPill('err', 'Error');
   document.getElementById('map-loading').classList.remove('show');
   showErr(msg);
 }
-function setPill(cls,txt) {
-  document.getElementById('pill').className='pill'+(cls?' '+cls:'');
-  document.getElementById('pill-txt').textContent=txt;
-}
-function showErr(msg) { const e=document.getElementById('err-box'); e.textContent=msg; e.classList.add('show'); }
-
 /* Scorecard */
 function openScorecard() {
   document.getElementById('sc-count-display').textContent = score;
@@ -638,25 +674,121 @@ function closeScorecard() { document.getElementById('scorecard-overlay').classLi
 function takeScreenshot() {
   const btn = document.getElementById('sc-screenshot-btn');
   const origHTML = btn.innerHTML;
-  btn.classList.add('saving'); btn.textContent = 'Saving\u2026';
-  html2canvas(document.getElementById('scorecard-capture'), { backgroundColor:null, scale:3, useCORS:true, logging:false })
-    .then(canvas => {
-      const link = document.createElement('a');
-      link.download = 'edsummit-score.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-      btn.classList.remove('saving');
-      btn.textContent = '\u2713 Saved!';
-      setTimeout(() => { btn.innerHTML = origHTML; }, 2000);
-    })
-    .catch(() => {
+  btn.classList.add('saving');
+  btn.textContent = 'Saving\u2026';
+  try {
+    const canvas = drawScorecard();
+    shareOrDownload(canvas, btn, origHTML);
+  } catch(e) {
+    console.error('Screenshot error:', e);
+    btn.classList.remove('saving');
+    btn.innerHTML = origHTML;
+    alert('Could not generate image. Please take a manual screenshot.');
+  }
+}
+
+function drawScorecard() {
+  const DPR = 3, W = 360, H = 480;
+  const c = document.createElement('canvas');
+  c.width = W * DPR; c.height = H * DPR;
+  const ctx = c.getContext('2d');
+  ctx.scale(DPR, DPR);
+
+  // background
+  const bg = ctx.createLinearGradient(W*0.3, 0, W*0.7, H);
+  bg.addColorStop(0, '#0d1a2a'); bg.addColorStop(0.6, '#0b0f14');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  // radial glow
+  const glow = ctx.createRadialGradient(W/2,0,0, W/2,0, W*0.75);
+  glow.addColorStop(0, 'rgba(61,168,255,0.10)');
+  glow.addColorStop(1, 'rgba(61,168,255,0)');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+
+  // globe ring
+  const cx = W/2, ringY = 106, r = 40;
+  ctx.beginPath(); ctx.arc(cx, ringY, r+9, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(255,184,48,0.12)'; ctx.lineWidth = 10; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, ringY, r, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(255,184,48,0.45)'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // globe icon lines
+  ctx.save(); ctx.translate(cx-18, ringY-18);
+  ctx.strokeStyle = '#ffb830'; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.arc(18,18,15,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(18,18,7,15,0,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(3,18); ctx.lineTo(33,18); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(5,10); ctx.quadraticCurveTo(18,14,31,10); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(5,26); ctx.quadraticCurveTo(18,22,31,26); ctx.stroke();
+  ctx.restore();
+
+  // heading
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#e8f2ff'; ctx.font = 'bold 20px sans-serif';
+  ctx.fillText('I found', cx, ringY + r + 36);
+  ctx.fillStyle = '#ffb830'; ctx.font = 'bold 26px sans-serif';
+  ctx.fillText('Globe', cx, ringY + r + 66);
+  ctx.fillStyle = '#e8f2ff'; ctx.font = 'bold 18px sans-serif';
+  ctx.fillText('at the EdSummit', cx, ringY + r + 92);
+
+  // label
+  ctx.fillStyle = '#5d7a96'; ctx.font = '11px monospace';
+  ctx.fillText('GLOBES DISCOVERED', cx, ringY + r + 126);
+
+  // big score
+  ctx.shadowColor = 'rgba(255,184,48,0.4)'; ctx.shadowBlur = 32;
+  ctx.fillStyle = '#ffb830'; ctx.font = 'bold 130px sans-serif';
+  ctx.fillText(String(score), cx, ringY + r + 248);
+  ctx.shadowBlur = 0;
+
+  // out of total
+  ctx.fillStyle = '#5d7a96'; ctx.font = '11px monospace';
+  ctx.fillText('OUT OF ' + TARGETS.length + ' TOTAL', cx, ringY + r + 272);
+
+  // watermark
+  ctx.fillStyle = 'rgba(93,122,150,0.4)'; ctx.font = '10px monospace';
+  ctx.fillText('GeoLocate \u00b7 EdSummit 2025', cx, H - 22);
+
+  return c;
+}
+
+function shareOrDownload(canvas, btn, origHTML) {
+  canvas.toBlob(function(blob) {
+    if (!blob) {
       btn.classList.remove('saving'); btn.innerHTML = origHTML;
-      if (navigator.share) {
-        navigator.share({ title:'My EdSummit Score', text:'I found '+score+' globe(s) at the EdSummit!' });
-      } else {
-        alert('Take a screenshot of this screen to save your score!');
-      }
-    });
+      alert('Could not generate image. Please take a manual screenshot.');
+      return;
+    }
+    const file = new File([blob], 'edsummit-score.png', { type: 'image/png' });
+
+    // 1. Native share sheet (best on iOS + Android)
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: 'EdSummit Score' })
+        .then(function() { flashSaved(btn, origHTML); })
+        .catch(function() { flashSaved(btn, origHTML); });
+      return;
+    }
+    // 2. Blob URL download (desktop / Android Chrome)
+    try {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'edsummit-score.png';
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+      flashSaved(btn, origHTML);
+      return;
+    } catch(e) {}
+    // 3. Open data URL in new tab — user long-presses to save (iOS Safari)
+    window.open(canvas.toDataURL('image/png'), '_blank');
+    flashSaved(btn, origHTML);
+  }, 'image/png');
+}
+
+function flashSaved(btn, origHTML) {
+  btn.classList.remove('saving');
+  btn.textContent = '\u2713 Saved!';
+  setTimeout(function() { btn.innerHTML = origHTML; }, 2200);
 }
 </script>
 </body>
