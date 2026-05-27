@@ -10,6 +10,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/dark/main.css">
+
+<!-- model-viewer web component (WebXR / ARKit / ARCore) -->
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -34,12 +38,12 @@
 html { height:100%; background:var(--bg); -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%; }
 body { height:100dvh; display:flex; flex-direction:column; background:var(--bg); color:var(--text); font-family:var(--mono); overflow:hidden; padding-top:var(--safe-top); padding-left:var(--safe-l); padding-right:var(--safe-r); }
 
-/* HEADER */
+/* ── HEADER ── */
 header { flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 16px; height:52px; background:var(--surf); border-bottom:1px solid var(--border); z-index:10; gap:10px; }
 .logo { font-family:var(--head); font-weight:800; font-size:1.2rem; letter-spacing:-0.02em; flex-shrink:0; }
 .logo em { font-style:normal; color:var(--accent); }
 .header-right { display:flex; align-items:center; gap:8px; }
-.score-badge { display:flex; align-items:center; gap:6px; background:rgba(255,184,48,0.1); border:1px solid rgba(255,184,48,0.35); border-radius:999px; padding:4px 11px; font-size:0.68rem; font-weight:700; letter-spacing:0.06em; color:var(--amber); transition:transform 0.15s; }
+.score-badge { display:flex; align-items:center; gap:6px; background:rgba(255,184,48,0.1); border:1px solid rgba(255,184,48,0.35); border-radius:999px; padding:4px 11px; font-size:0.68rem; font-weight:700; letter-spacing:0.06em; color:var(--amber); cursor:pointer; transition:transform 0.15s; -webkit-user-select:none; user-select:none; }
 .score-badge.bump { transform:scale(1.18); }
 .pill { display:flex; align-items:center; gap:6px; font-size:0.62rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); border:1px solid var(--border2); padding:4px 10px; border-radius:999px; transition:color 0.35s,border-color 0.35s; white-space:nowrap; }
 .pill.on  { color:var(--green); border-color:var(--green); }
@@ -48,7 +52,7 @@ header { flex-shrink:0; display:flex; align-items:center; justify-content:space-
 .pill.on .dot { animation:blink 1.6s ease-in-out infinite; }
 @keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
 
-/* MAP */
+/* ── MAP ── */
 #map-wrap { flex-shrink:0; position:relative; height:52dvh; min-height:240px; background:#0d1520; }
 #viewDiv { width:100%; height:100%; padding:0; margin:0; }
 .map-placeholder { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; background:#0d1520; z-index:400; transition:opacity 0.45s; pointer-events:none; }
@@ -60,10 +64,8 @@ header { flex-shrink:0; display:flex; align-items:center; justify-content:space-
 .map-loading p { font-size:0.68rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); }
 .map-spin { width:28px; height:28px; border:2.5px solid rgba(61,168,255,0.2); border-top-color:var(--accent); border-radius:50%; animation:rot 0.8s linear infinite; }
 @keyframes rot { to { transform:rotate(360deg); } }
-.esri-ui-corner { gap:6px; }
-.esri-widget { font-family:var(--mono) !important; }
 
-/* PANEL */
+/* ── PANEL ── */
 #panel { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; background:var(--bg); padding:18px 18px 0; display:flex; flex-direction:column; gap:14px; }
 .section-lbl { font-size:0.6rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
 .coord-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
@@ -84,7 +86,7 @@ header { flex-shrink:0; display:flex; align-items:center; justify-content:space-
 .err-box.show { display:block; }
 .panel-spacer { height:90px; flex-shrink:0; }
 
-/* STICKY BUTTON */
+/* ── STICKY BUTTON ── */
 #btn-wrap { flex-shrink:0; padding:12px 18px calc(12px + var(--safe-bot)); background:var(--bg); border-top:1px solid var(--border); }
 #loc-btn { width:100%; height:56px; display:flex; align-items:center; justify-content:center; gap:10px; background:transparent; border:1.5px solid var(--accent); border-radius:12px; color:var(--accent); font-family:var(--mono); font-size:0.85rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; touch-action:manipulation; -webkit-user-select:none; user-select:none; transition:background 0.15s,opacity 0.2s; }
 #loc-btn:active:not(:disabled) { background:rgba(61,168,255,0.1); }
@@ -93,8 +95,8 @@ header { flex-shrink:0; display:flex; align-items:center; justify-content:space-
 #loc-btn.busy .btn-spin { display:block; }
 #loc-btn.busy #btn-label { opacity:0.5; }
 
-/* GLOBE MODAL */
-#modal-overlay { position:fixed; inset:0; background:rgba(7,11,17,0.78); z-index:2000; display:flex; align-items:flex-end; opacity:0; pointer-events:none; transition:opacity 0.3s; -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); }
+/* ── GLOBE MODAL ── */
+#modal-overlay { position:fixed; inset:0; background:rgba(7,11,17,0.82); z-index:2000; display:flex; align-items:flex-end; opacity:0; pointer-events:none; transition:opacity 0.3s; -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); }
 #modal-overlay.open { opacity:1; pointer-events:all; }
 #modal-card { width:100%; background:var(--surf); border-top:1px solid var(--border2); border-radius:20px 20px 0 0; padding:28px 24px calc(28px + var(--safe-bot)); display:flex; flex-direction:column; align-items:center; gap:14px; transform:translateY(100%); transition:transform 0.35s cubic-bezier(0.32,0.72,0,1); }
 #modal-overlay.open #modal-card { transform:translateY(0); }
@@ -111,176 +113,111 @@ header { flex-shrink:0; display:flex; align-items:center; justify-content:space-
 #dismiss-btn { background:none; border:none; color:var(--muted); font-family:var(--mono); font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; touch-action:manipulation; padding:8px 16px; }
 #dismiss-btn:active { opacity:0.5; }
 
-/* SCORE TOAST */
+/* ── SCORE TOAST ── */
 #score-toast { position:fixed; top:70px; left:50%; transform:translateX(-50%) translateY(-20px); background:rgba(255,184,48,0.12); border:1px solid rgba(255,184,48,0.45); border-radius:999px; padding:8px 22px; font-size:0.78rem; font-weight:700; letter-spacing:0.06em; color:var(--amber); z-index:3000; opacity:0; pointer-events:none; transition:opacity 0.25s,transform 0.25s; white-space:nowrap; }
 #score-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
-/* AR VIEWER */
-#ar-viewer { position:fixed; inset:0; z-index:4000; display:flex; flex-direction:column; background:#000; transform:translateY(100%); transition:transform 0.35s cubic-bezier(0.32,0.72,0,1); }
-#ar-viewer.open { transform:translateY(0); }
-#ar-header { flex-shrink:0; height:52px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; background:var(--surf); border-bottom:1px solid var(--border); padding-top:var(--safe-top); }
+/* ── AR VIEWER (model-viewer) ── */
+#ar-viewer {
+  position: fixed; inset: 0; z-index: 4000;
+  display: flex; flex-direction: column;
+  background: #000;
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
+}
+#ar-viewer.open { transform: translateY(0); }
+
+#ar-header {
+  flex-shrink: 0;
+  height: calc(52px + var(--safe-top));
+  padding-top: var(--safe-top);
+  display: flex; align-items: center; justify-content: space-between;
+  padding-left: 16px; padding-right: 16px;
+  background: var(--surf);
+  border-bottom: 1px solid var(--border);
+  z-index: 2;
+}
 #ar-title { display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:0.75rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--amber); }
 #ar-close-btn { background:var(--amber); border:none; border-radius:8px; color:#0b0f14; font-family:var(--mono); font-size:0.72rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; padding:9px 16px; cursor:pointer; touch-action:manipulation; -webkit-user-select:none; user-select:none; }
 #ar-close-btn:active { opacity:0.8; }
-#ar-iframe { flex:1; width:100%; border:none; background:#000; }
 
-/* AR hint banner */
-#ar-hint {
+/* model-viewer fills the rest */
+#the-model-viewer {
+  flex: 1;
+  width: 100%;
+  background: #0d1520;
+  --progress-bar-color: var(--amber);
+  --progress-mask: transparent;
+}
+
+/* Style the built-in AR button inside model-viewer */
+#the-model-viewer::part(default-ar-button) {
+  display: none; /* we use our own button */
+}
+
+/* Our custom AR launch button — sits over the model-viewer */
+#ar-launch-wrap {
   position: absolute;
-  bottom: 0; left: 0; right: 0;
-  background: linear-gradient(0deg, rgba(11,15,20,0.97) 0%, rgba(11,15,20,0.7) 80%, transparent 100%);
-  padding: 28px 20px calc(20px + var(--safe-bot));
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
-  z-index: 10; pointer-events: none;
-  animation: hint-fade 0.5s ease 1.2s both;
-}
-#ar-hint.hidden { display: none; }
-@keyframes hint-fade { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-
-.ar-hint-badge {
-  display: flex; align-items: center; gap: 9px;
-  background: rgba(255,184,48,0.12);
-  border: 1px solid rgba(255,184,48,0.4);
-  border-radius: 999px; padding: 8px 16px;
-  font-size: 0.7rem; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--amber);
-  pointer-events: none;
-}
-.ar-hint-icon {
-  width: 28px; height: 28px;
-  background: var(--amber);
-  border-radius: 6px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.ar-hint-text { font-size: 0.72rem; color: var(--text); line-height: 1.6; text-align: center; }
-.ar-hint-text strong { color: var(--amber); }
-
-/* SCORECARD MODAL */
-#scorecard-overlay {
-  position: fixed; inset: 0; z-index: 5000;
-  background: rgba(7,11,17,0.82);
-  display: flex; align-items: center; justify-content: center;
-  padding: 24px;
-  opacity: 0; pointer-events: none;
-  transition: opacity 0.3s;
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-}
-#scorecard-overlay.open { opacity: 1; pointer-events: all; }
-
-#scorecard-card {
-  width: 100%; max-width: 360px;
-  background: var(--surf);
-  border: 1px solid var(--border2);
-  border-radius: 20px;
-  overflow: hidden;
-  transform: scale(0.92) translateY(16px);
-  transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
-  box-shadow: 0 24px 64px rgba(0,0,0,0.6);
-}
-#scorecard-overlay.open #scorecard-card { transform: scale(1) translateY(0); }
-
-/* the capturable area */
-#scorecard-capture {
-  background: linear-gradient(160deg, #0d1a2a 0%, #0b0f14 60%);
-  padding: 36px 28px 32px;
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  position: relative; overflow: hidden;
-}
-#scorecard-capture::before {
-  content: '';
-  position: absolute; inset: 0;
-  background: radial-gradient(ellipse at 50% 0%, rgba(61,168,255,0.08) 0%, transparent 70%);
+  bottom: calc(28px + var(--safe-bot));
+  left: 0; right: 0;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px; z-index: 5;
+  padding: 0 24px;
   pointer-events: none;
 }
 
-.sc-globe-ring {
-  width: 88px; height: 88px;
-  border: 1.5px solid rgba(255,184,48,0.35);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  margin-bottom: 8px;
-  position: relative;
-  animation: sc-ring 3s ease-in-out infinite;
+#ar-launch-btn {
+  pointer-events: all;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; max-width: 320px; height: 56px;
+  background: var(--amber); border: none; border-radius: 14px;
+  color: #0b0f14; font-family: var(--mono); font-size: 0.82rem;
+  font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  cursor: pointer; touch-action: manipulation;
+  -webkit-user-select: none; user-select: none;
+  box-shadow: 0 8px 28px rgba(255,184,48,0.35);
+  transition: opacity 0.15s, transform 0.1s;
 }
-@keyframes sc-ring {
-  0%,100%{box-shadow:0 0 0 0 rgba(255,184,48,0.25)}
-  50%{box-shadow:0 0 0 12px rgba(255,184,48,0)}
-}
-.sc-heading {
-  font-family: var(--head);
-  font-weight: 800;
-  font-size: 1.05rem;
-  letter-spacing: -0.01em;
-  color: var(--text);
-  text-align: center;
-  line-height: 1.3;
-  margin-top: 4px;
-}
-.sc-heading em { font-style: normal; color: var(--amber); }
-.sc-found-label {
-  font-size: 0.62rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-top: 12px;
-}
-.sc-count {
-  font-family: var(--head);
-  font-weight: 800;
-  font-size: 7rem;
-  line-height: 1;
-  color: var(--amber);
-  letter-spacing: -0.04em;
-  text-shadow: 0 0 40px rgba(255,184,48,0.35);
-}
-.sc-globe-label {
-  font-size: 0.7rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-top: -6px;
-}
-.sc-globe-label span { color: var(--text); }
+#ar-launch-btn:active { opacity:0.85; transform:scale(0.97); }
 
-/* watermark line */
-.sc-watermark {
-  font-size: 0.58rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(93,122,150,0.5);
-  margin-top: 14px;
+.ar-hint-text {
+  pointer-events: none;
+  font-size: 0.65rem; letter-spacing: 0.08em; text-align: center;
+  color: rgba(255,255,255,0.45); line-height: 1.7;
 }
 
-/* bottom action bar */
-#scorecard-actions {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 20px calc(14px + var(--safe-bot));
-  border-top: 1px solid var(--border);
-  gap: 10px;
+/* not-supported message */
+#ar-not-supported {
+  display: none;
+  position: absolute; bottom: calc(28px + var(--safe-bot));
+  left: 24px; right: 24px; text-align: center;
+  font-size: 0.7rem; color: var(--warn); line-height: 1.8;
+  background: rgba(255,157,61,0.08); border:1px solid rgba(255,157,61,0.25);
+  border-radius: 10px; padding: 12px;
 }
-#sc-close-btn {
-  background: none; border: 1px solid var(--border2);
-  border-radius: 8px; color: var(--muted);
-  font-family: var(--mono); font-size: 0.68rem;
-  letter-spacing: 0.1em; text-transform: uppercase;
-  padding: 10px 16px; cursor: pointer;
-  touch-action: manipulation; -webkit-user-select: none; user-select: none;
-}
-#sc-close-btn:active { opacity: 0.6; }
-#sc-screenshot-btn {
-  display: flex; align-items: center; gap: 8px;
-  background: var(--surf2); border: 1px solid var(--border2);
-  border-radius: 8px; color: var(--text);
-  font-family: var(--mono); font-size: 0.68rem;
-  letter-spacing: 0.08em; text-transform: uppercase;
-  padding: 10px 16px; cursor: pointer;
-  touch-action: manipulation; -webkit-user-select: none; user-select: none;
-  transition: color 0.2s, border-color 0.2s;
-}
-#sc-screenshot-btn:active { opacity: 0.7; }
-#sc-screenshot-btn.saving { color: var(--green); border-color: var(--green); }
+
+/* ── SCORECARD MODAL ── */
+#scorecard-overlay { position:fixed; inset:0; z-index:5000; background:rgba(7,11,17,0.82); display:flex; align-items:center; justify-content:center; padding:24px; opacity:0; pointer-events:none; transition:opacity 0.3s; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
+#scorecard-overlay.open { opacity:1; pointer-events:all; }
+#scorecard-card { width:100%; max-width:360px; background:var(--surf); border:1px solid var(--border2); border-radius:20px; overflow:hidden; transform:scale(0.92) translateY(16px); transition:transform 0.35s cubic-bezier(0.32,0.72,0,1); box-shadow:0 24px 64px rgba(0,0,0,0.6); }
+#scorecard-overlay.open #scorecard-card { transform:scale(1) translateY(0); }
+#scorecard-capture { background:linear-gradient(160deg,#0d1a2a 0%,#0b0f14 60%); padding:36px 28px 32px; display:flex; flex-direction:column; align-items:center; gap:6px; position:relative; overflow:hidden; }
+#scorecard-capture::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 50% 0%,rgba(61,168,255,0.08) 0%,transparent 70%); pointer-events:none; }
+.sc-globe-ring { width:88px; height:88px; border:1.5px solid rgba(255,184,48,0.35); border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:8px; animation:sc-ring 3s ease-in-out infinite; }
+@keyframes sc-ring { 0%,100%{box-shadow:0 0 0 0 rgba(255,184,48,0.25)}50%{box-shadow:0 0 0 12px rgba(255,184,48,0)} }
+.sc-heading { font-family:var(--head); font-weight:800; font-size:1.05rem; letter-spacing:-0.01em; color:var(--text); text-align:center; line-height:1.3; margin-top:4px; }
+.sc-heading em { font-style:normal; color:var(--amber); }
+.sc-found-label { font-size:0.62rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--muted); margin-top:12px; }
+.sc-count { font-family:var(--head); font-weight:800; font-size:7rem; line-height:1; color:var(--amber); letter-spacing:-0.04em; text-shadow:0 0 40px rgba(255,184,48,0.35); }
+.sc-globe-label { font-size:0.7rem; letter-spacing:0.16em; text-transform:uppercase; color:var(--muted); margin-top:-6px; }
+.sc-globe-label span { color:var(--text); }
+.sc-watermark { font-size:0.58rem; letter-spacing:0.12em; text-transform:uppercase; color:rgba(93,122,150,0.5); margin-top:14px; }
+#scorecard-actions { display:flex; align-items:center; justify-content:space-between; padding:14px 20px calc(14px + var(--safe-bot)); border-top:1px solid var(--border); gap:10px; }
+#sc-close-btn { background:none; border:1px solid var(--border2); border-radius:8px; color:var(--muted); font-family:var(--mono); font-size:0.68rem; letter-spacing:0.1em; text-transform:uppercase; padding:10px 16px; cursor:pointer; touch-action:manipulation; }
+#sc-close-btn:active { opacity:0.6; }
+#sc-screenshot-btn { display:flex; align-items:center; gap:8px; background:var(--surf2); border:1px solid var(--border2); border-radius:8px; color:var(--text); font-family:var(--mono); font-size:0.68rem; letter-spacing:0.08em; text-transform:uppercase; padding:10px 16px; cursor:pointer; touch-action:manipulation; -webkit-user-select:none; user-select:none; transition:color 0.2s,border-color 0.2s; }
+#sc-screenshot-btn:active { opacity:0.7; }
+#sc-screenshot-btn.saving { color:var(--green); border-color:var(--green); }
 </style>
 </head>
 <body>
@@ -288,7 +225,7 @@ header { flex-shrink:0; display:flex; align-items:center; justify-content:space-
 <header>
   <div class="logo">Geo<em>Locate</em></div>
   <div class="header-right">
-    <div class="score-badge" id="score-badge" onclick="openScorecard()" role="button" style="cursor:pointer">&#9733; <span id="score-num">0</span></div>
+    <div class="score-badge" id="score-badge" onclick="openScorecard()" role="button">&#9733; <span id="score-num">0</span></div>
     <div class="pill" id="pill"><div class="dot"></div><span id="pill-txt">Loading map&#8230;</span></div>
   </div>
 </header>
@@ -341,7 +278,7 @@ header { flex-shrink:0; display:flex; align-items:center; justify-content:space-
   </button>
 </div>
 
-<!-- GLOBE MODAL -->
+<!-- GLOBE DETECTED MODAL -->
 <div id="modal-overlay" role="dialog" aria-modal="true">
   <div id="modal-card">
     <div class="modal-handle"></div>
@@ -359,7 +296,7 @@ header { flex-shrink:0; display:flex; align-items:center; justify-content:space-
     <div class="modal-dist" id="modal-dist"></div>
     <button id="ar-btn" onclick="launchAR()">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-      Launch AR Object
+      View AR Object
     </button>
     <button id="dismiss-btn" onclick="dismissModal()">Dismiss</button>
   </div>
@@ -368,319 +305,63 @@ header { flex-shrink:0; display:flex; align-items:center; justify-content:space-
 <!-- SCORE TOAST -->
 <div id="score-toast"></div>
 
-<!-- AR VIEWER -->
+<!-- AR VIEWER — model-viewer + camera passthrough -->
 <div id="ar-viewer">
   <div id="ar-header">
     <div id="ar-title">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffb830" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-      AR Object
+      Globe AR Viewer
     </div>
     <button id="ar-close-btn" onclick="closeAR()">&#10003;&nbsp; Done &#8212; Collect Globe</button>
   </div>
-  <iframe id="ar-iframe" src="" allowfullscreen allow="autoplay; fullscreen; xr-spatial-tracking" frameborder="0"></iframe>
-  <div id="ar-hint">
-    <div class="ar-hint-badge">
-      <div class="ar-hint-icon">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0b0f14" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
-      </div>
-      Tap the AR cube in the viewer
-    </div>
+
+  <!--
+    model-viewer attributes:
+      ar                  — enables AR mode
+      ar-modes            — tries WebXR first (real camera passthrough in Android Chrome),
+                            then Scene Viewer (Android ARCore app),
+                            then Quick Look (iOS ARKit)
+      ar-scale="fixed"    — object stays true physical size, not auto-scaled
+      camera-controls     — pinch/drag to inspect in 3D before going AR
+      auto-rotate         — slowly spins while loading
+      shadow-intensity    — subtle ground shadow in AR
+  -->
+  <model-viewer
+    id="the-model-viewer"
+    src="https://trbaker.github.io/geogames/Nearky_Pangea.glb"
+    alt="A 3D globe"
+    ar
+    ar-modes="webxr scene-viewer quick-look"
+    ar-scale="fixed"
+    camera-controls
+    auto-rotate
+    auto-rotate-delay="0"
+    rotation-per-second="20deg"
+    shadow-intensity="1"
+    shadow-softness="0.8"
+    exposure="1.1"
+    environment-image="neutral"
+    loading="eager"
+  >
+    <!-- slot="ar-button" is hidden; we use our own button below -->
+    <div slot="progress-bar" style="display:none"></div>
+  </model-viewer>
+
+  <!-- Our AR launch button overlaid on the model viewer -->
+  <div id="ar-launch-wrap">
+    <button id="ar-launch-btn" onclick="activateAR()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+      Place Globe in Real World
+    </button>
     <div class="ar-hint-text">
-      Tap the <strong>AR button</strong> inside the 3D viewer below<br>to place the globe in your real world surroundings
+      Tap to activate camera &amp; place the globe in your surroundings
+    </div>
+    <div id="ar-not-supported">
+      AR is not supported on this device/browser.<br>
+      Try Chrome on Android or Safari on iOS 12+.
     </div>
   </div>
 </div>
-
-<script src="https://js.arcgis.com/4.29/">
-/* SCORECARD */
-function openScorecard() {
-  document.getElementById('sc-count-display').textContent = score;
-  document.getElementById('sc-total').textContent = TARGETS.length;
-  document.getElementById('scorecard-overlay').classList.add('open');
-}
-function closeScorecard() {
-  document.getElementById('scorecard-overlay').classList.remove('open');
-}
-
-function takeScreenshot() {
-  const btn = document.getElementById('sc-screenshot-btn');
-  btn.classList.add('saving');
-  btn.querySelector('span') && (btn.querySelector('span').textContent = 'Saving…');
-
-  const target = document.getElementById('scorecard-capture');
-
-  html2canvas(target, {
-    backgroundColor: null,
-    scale: 3,
-    useCORS: true,
-    logging: false
-  }).then(canvas => {
-    const link = document.createElement('a');
-    link.download = 'edsummit-score.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-    btn.classList.remove('saving');
-    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Saved!';
-    setTimeout(() => {
-      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg> Save Screenshot';
-    }, 2000);
-  }).catch(() => {
-    btn.classList.remove('saving');
-    // Fallback: native share / manual screenshot prompt
-    if (navigator.share) {
-      navigator.share({ title: 'My EdSummit Score', text: 'I found ' + score + ' globe(s) at the EdSummit!' });
-    } else {
-      alert('Take a screenshot of this screen to save your score!');
-    }
-    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg> Save Screenshot';
-  });
-}
-</script>
-<script>
-/* ══════════════════════════════════════════
-   CONFIGURATION
-   ══════════════════════════════════════════ */
-const AR_URL = "https://sketchfab.com/models/cbbe1e1ae71b4e44acc6bf1b5245f1bb/embed?ar=1&ui_ar=1&ui_controls=1&ui_infos=0&ui_watermark=0&ui_hint=0";
-
-const TARGETS = [
-  { name: "Globe #1", lat: 38.912281, lng: -94.613686 },
-  // more targets coming...
-];
-
-const TRIGGER_DISTANCE_M = 50;
-const WEB_MAP_ID = "359e7e596f6745558679fc9962d7ab72";
-/* ══════════════════════════════════════════ */
-
-let view            = null;
-let userGraphic     = null;
-let accuracyGraphic = null;
-let watchId         = null;
-let lastLat         = null, lastLng = null;
-let lastDMSlat      = '',   lastDMSlng = '';
-let score           = 0;
-let foundTargets    = new Set();
-let arPending       = false;
-let activeTarget    = null;
-
-/* Haversine distance in metres */
-function haversine(lat1, lng1, lat2, lng2) {
-  const R = 6371000, r = d => d * Math.PI / 180;
-  const dLat = r(lat2-lat1), dLng = r(lng2-lng1);
-  const a = Math.sin(dLat/2)**2 + Math.cos(r(lat1))*Math.cos(r(lat2))*Math.sin(dLng/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
-
-/* Proximity check on every GPS update */
-function checkProximity(lat, lng) {
-  for (let i = 0; i < TARGETS.length; i++) {
-    if (foundTargets.has(i)) continue;
-    const d = haversine(lat, lng, TARGETS[i].lat, TARGETS[i].lng);
-    if (d <= TRIGGER_DISTANCE_M) {
-      showModal(TARGETS[i], i, Math.round(d));
-      return;
-    }
-  }
-}
-
-/* Modal */
-function showModal(target, idx, distM) {
-  activeTarget = { target, idx };
-  document.getElementById('modal-target-name').textContent = target.name;
-  document.getElementById('modal-dist').innerHTML =
-    'You are <strong>' + distM + ' m</strong> from this globe';
-  document.getElementById('modal-overlay').classList.add('open');
-}
-function dismissModal() {
-  document.getElementById('modal-overlay').classList.remove('open');
-  activeTarget = null;
-}
-
-/* Launch AR — inline iframe */
-function launchAR() {
-  document.getElementById('modal-overlay').classList.remove('open');
-  document.getElementById('ar-iframe').src = AR_URL;
-  document.getElementById('ar-viewer').classList.add('open');
-  // Show hint, then fade after 7s
-  const hint = document.getElementById('ar-hint');
-  hint.classList.remove('hidden');
-  clearTimeout(window._hintTimer);
-  window._hintTimer = setTimeout(() => hint.classList.add('hidden'), 7000);
-  arPending = true;
-}
-
-/* Close AR viewer and credit score */
-function closeAR() {
-  document.getElementById('ar-viewer').classList.remove('open');
-  document.getElementById('ar-iframe').src = '';
-  if (arPending && activeTarget !== null) {
-    arPending = false;
-    foundTargets.add(activeTarget.idx);
-    score++;
-    updateScore();
-    showToast('+1  ' + activeTarget.target.name + ' found!');
-    activeTarget = null;
-  }
-}
-
-function updateScore() {
-  document.getElementById('score-num').textContent = score;
-  const b = document.getElementById('score-badge');
-  b.classList.add('bump');
-  setTimeout(() => b.classList.remove('bump'), 300);
-}
-function showToast(msg) {
-  const t = document.getElementById('score-toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2800);
-}
-
-/* ArcGIS SDK */
-require([
-  "esri/WebMap",
-  "esri/views/MapView",
-  "esri/Graphic",
-  "esri/geometry/Point",
-  "esri/geometry/geometryEngine",
-  "esri/symbols/SimpleMarkerSymbol",
-  "esri/symbols/SimpleFillSymbol",
-  "esri/symbols/SimpleLineSymbol",
-  "esri/widgets/Zoom"
-], function(WebMap, MapView, Graphic, Point, geometryEngine,
-            SimpleMarkerSymbol, SimpleFillSymbol, SimpleLineSymbol, Zoom) {
-
-  const webmap = new WebMap({ portalItem: { id: WEB_MAP_ID } });
-  view = new MapView({ container: "viewDiv", map: webmap, ui: { components: [] } });
-  view.ui.add(new Zoom({ view }), "bottom-right");
-
-  view.when(() => {
-    document.getElementById('placeholder').classList.add('gone');
-    setPill('on', 'Map ready');
-    document.getElementById('loc-btn').disabled = false;
-    document.getElementById('btn-label').textContent = '\u2295\u00a0 Locate Me';
-
-    /* Amber target markers */
-    TARGETS.forEach(t => {
-      view.graphics.add(new Graphic({
-        geometry: new Point({ latitude: t.lat, longitude: t.lng }),
-        symbol: new SimpleMarkerSymbol({
-          style: 'circle', color: [255,184,48,0.9], size: 12,
-          outline: { color: [255,255,255,0.7], width: 1.5 }
-        }),
-        popupTemplate: {
-          title: t.name,
-          content: 'Lat: ' + t.lat + '&#176;, Lng: ' + t.lng + '&#176;'
-        }
-      }));
-    });
-
-  }).catch(() => {
-    setPill('err', 'Map error');
-    showErr('Failed to load ArcGIS web map.');
-  });
-
-  window._plotPosition = function(lat, lng, acc) {
-    const pt = new Point({ latitude: lat, longitude: lng });
-    if (userGraphic)     view.graphics.remove(userGraphic);
-    if (accuracyGraphic) view.graphics.remove(accuracyGraphic);
-
-    accuracyGraphic = new Graphic({
-      geometry: geometryEngine.geodesicBuffer(pt, acc, 'meters'),
-      symbol: new SimpleFillSymbol({
-        color: [61,168,255,0.07],
-        outline: new SimpleLineSymbol({ color:[61,168,255,0.55], width:1, style:'dash' })
-      })
-    });
-    userGraphic = new Graphic({
-      geometry: pt,
-      symbol: new SimpleMarkerSymbol({
-        style:'circle', color:[61,168,255,1], size:14,
-        outline: { color:[255,255,255,0.9], width:2 }
-      }),
-      popupTemplate: {
-        title: 'You are here',
-        content: 'Lat: ' + lat.toFixed(6) + '&#176;<br>Lng: ' + lng.toFixed(6) + '&#176;<br>Accuracy: &#177;' + Math.round(acc) + ' m'
-      }
-    });
-    view.graphics.addMany([accuracyGraphic, userGraphic]);
-    view.goTo({ target: pt, zoom: 15 }, { duration: 900, easing: 'ease-in-out' });
-    document.getElementById('map-loading').classList.remove('show');
-  };
-});
-
-/* DMS */
-function toDMS(d, pos, neg) {
-  const dir = d >= 0 ? pos : neg, a = Math.abs(d), deg = Math.floor(a);
-  const mf = (a-deg)*60, min = Math.floor(mf), sec = ((mf-min)*60).toFixed(1);
-  return deg + '\u00b0 ' + min + '\' ' + sec + '" ' + dir;
-}
-
-/* Copy */
-function copyDec() { navigator.clipboard.writeText(lastLat.toFixed(7)+', '+lastLng.toFixed(7)).then(()=>flash('copy-dec')); }
-function copyDMS() { navigator.clipboard.writeText(lastDMSlat+', '+lastDMSlng).then(()=>flash('copy-dms')); }
-function flash(id) {
-  const b = document.getElementById(id), orig = b.innerHTML;
-  b.classList.add('ok'); b.textContent = 'Copied!';
-  setTimeout(() => { b.classList.remove('ok'); b.innerHTML = orig; }, 1600);
-}
-
-/* Tracking */
-function startTracking() {
-  if (!navigator.geolocation) return fail('Geolocation not supported.');
-  const btn = document.getElementById('loc-btn');
-  btn.classList.add('busy');
-  document.getElementById('btn-label').textContent = 'Acquiring signal\u2026';
-  setPill('', 'Locating');
-  document.getElementById('err-box').classList.remove('show');
-  document.getElementById('map-loading').classList.add('show');
-  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
-
-  watchId = navigator.geolocation.watchPosition(pos => {
-    const { latitude: lat, longitude: lng, accuracy } = pos.coords;
-    lastLat = lat; lastLng = lng;
-    lastDMSlat = toDMS(lat,'N','S'); lastDMSlng = toDMS(lng,'E','W');
-
-    document.getElementById('lat-val').textContent = lat.toFixed(7) + '\u00b0';
-    document.getElementById('lng-val').textContent = lng.toFixed(7) + '\u00b0';
-    document.getElementById('lat-dms').textContent = lastDMSlat;
-    document.getElementById('lng-dms').textContent = lastDMSlng;
-    document.getElementById('cc-lat').classList.add('lit');
-    document.getElementById('cc-lng').classList.add('lit');
-    document.getElementById('copy-row').classList.add('show');
-
-    setPill('on', 'Tracking');
-    if (window._plotPosition) window._plotPosition(lat, lng, accuracy);
-    else document.getElementById('map-loading').classList.remove('show');
-
-    btn.classList.remove('busy');
-    document.getElementById('btn-label').textContent = '\u21ba\u00a0 Restart Tracking';
-    btn.disabled = false;
-
-    checkProximity(lat, lng);
-
-  }, e => {
-    const msgs = ['','Permission denied.','Position unavailable.','Request timed out.'];
-    fail(msgs[e.code] || 'Location error.');
-  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
-}
-
-function fail(msg) {
-  const btn = document.getElementById('loc-btn');
-  btn.disabled = false; btn.classList.remove('busy');
-  document.getElementById('btn-label').textContent = '\u2295\u00a0 Retry';
-  setPill('err', 'Error');
-  document.getElementById('map-loading').classList.remove('show');
-  showErr(msg);
-}
-function setPill(cls, txt) {
-  document.getElementById('pill').className = 'pill' + (cls ? ' '+cls : '');
-  document.getElementById('pill-txt').textContent = txt;
-}
-function showErr(msg) {
-  const e = document.getElementById('err-box');
-  e.textContent = msg; e.classList.add('show');
-}
-</script>
 
 <!-- SCORECARD MODAL -->
 <div id="scorecard-overlay" role="dialog" aria-modal="true">
@@ -710,5 +391,273 @@ function showErr(msg) {
     </div>
   </div>
 </div>
+
+<script src="https://js.arcgis.com/4.29/"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+/* ══════════════════════════════════════════
+   CONFIGURATION — edit these
+   ══════════════════════════════════════════ */
+
+// Host your GLB file and paste its public URL here.
+// To get the GLB from Sketchfab:
+//   1. Open the model page → Download → GLB
+//   2. Host on any CDN (GitHub Pages, S3, etc.) with CORS enabled
+//   3. Paste the URL below
+const GLOBE_GLB_URL = "https://trbaker.github.io/geogames/Nearky_Pangea.glb";
+
+const TARGETS = [
+  { name: "Globe #1", lat: 38.912281, lng: -94.613686 },
+  // more targets coming...
+];
+
+const TRIGGER_DISTANCE_M = 50;
+const WEB_MAP_ID = "359e7e596f6745558679fc9962d7ab72";
+/* ══════════════════════════════════════════ */
+
+let view            = null;
+let userGraphic     = null;
+let accuracyGraphic = null;
+let watchId         = null;
+let lastLat         = null, lastLng = null;
+let lastDMSlat      = '',   lastDMSlng = '';
+let score           = 0;
+let foundTargets    = new Set();
+let arPending       = false;
+let activeTarget    = null;
+
+/* Set GLB src on the model-viewer */
+const modelViewer = document.getElementById('the-model-viewer');
+if (GLOBE_GLB_URL && GLOBE_GLB_URL !== 'GLOBE_GLB_URL_HERE') {
+  modelViewer.setAttribute('src', GLOBE_GLB_URL);
+}
+
+/* Haversine */
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371000, r = d => d * Math.PI / 180;
+  const dLat = r(lat2-lat1), dLng = r(lng2-lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(r(lat1))*Math.cos(r(lat2))*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function checkProximity(lat, lng) {
+  for (let i = 0; i < TARGETS.length; i++) {
+    if (foundTargets.has(i)) continue;
+    const d = haversine(lat, lng, TARGETS[i].lat, TARGETS[i].lng);
+    if (d <= TRIGGER_DISTANCE_M) { showModal(TARGETS[i], i, Math.round(d)); return; }
+  }
+}
+
+/* Globe modal */
+function showModal(target, idx, distM) {
+  activeTarget = { target, idx };
+  document.getElementById('modal-target-name').textContent = target.name;
+  document.getElementById('modal-dist').innerHTML = 'You are <strong>' + distM + ' m</strong> from this globe';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function dismissModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  activeTarget = null;
+}
+
+/* Launch AR viewer */
+function launchAR() {
+  document.getElementById('modal-overlay').classList.remove('open');
+
+  if (!GLOBE_GLB_URL || GLOBE_GLB_URL === 'GLOBE_GLB_URL_HERE') {
+    alert('GLB URL not configured yet.\n\nSet GLOBE_GLB_URL in the script to a hosted .glb file.');
+    return;
+  }
+
+  document.getElementById('ar-viewer').classList.add('open');
+  arPending = true;
+}
+
+/* Activate AR passthrough via model-viewer */
+function activateAR() {
+  if (!modelViewer.canActivateAR) {
+    document.getElementById('ar-not-supported').style.display = 'block';
+    setTimeout(() => { document.getElementById('ar-not-supported').style.display = 'none'; }, 4000);
+    return;
+  }
+  modelViewer.activateAR();
+}
+
+/* model-viewer AR session events */
+modelViewer.addEventListener('ar-status', (e) => {
+  // e.detail.status: 'session-started' | 'object-placed' | 'failed'
+  if (e.detail.status === 'failed') {
+    document.getElementById('ar-not-supported').style.display = 'block';
+    setTimeout(() => { document.getElementById('ar-not-supported').style.display = 'none'; }, 4000);
+  }
+});
+
+/* Close AR, credit score */
+function closeAR() {
+  // exit AR session if active
+  try { modelViewer.exitPresentAR && modelViewer.exitPresentAR(); } catch(e) {}
+  document.getElementById('ar-viewer').classList.remove('open');
+
+  if (arPending && activeTarget !== null) {
+    arPending = false;
+    foundTargets.add(activeTarget.idx);
+    score++;
+    updateScore();
+    showToast('+1  ' + activeTarget.target.name + ' found!');
+    activeTarget = null;
+  }
+}
+
+function updateScore() {
+  document.getElementById('score-num').textContent = score;
+  const b = document.getElementById('score-badge');
+  b.classList.add('bump');
+  setTimeout(() => b.classList.remove('bump'), 300);
+}
+function showToast(msg) {
+  const t = document.getElementById('score-toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ArcGIS */
+require([
+  "esri/WebMap","esri/views/MapView","esri/Graphic","esri/geometry/Point",
+  "esri/geometry/geometryEngine","esri/symbols/SimpleMarkerSymbol",
+  "esri/symbols/SimpleFillSymbol","esri/symbols/SimpleLineSymbol","esri/widgets/Zoom"
+], function(WebMap,MapView,Graphic,Point,geometryEngine,
+            SimpleMarkerSymbol,SimpleFillSymbol,SimpleLineSymbol,Zoom) {
+  const webmap = new WebMap({ portalItem: { id: WEB_MAP_ID } });
+  view = new MapView({ container:"viewDiv", map:webmap, ui:{ components:[] } });
+  view.ui.add(new Zoom({ view }), "bottom-right");
+
+  view.when(() => {
+    document.getElementById('placeholder').classList.add('gone');
+    setPill('on','Map ready');
+    document.getElementById('loc-btn').disabled = false;
+    document.getElementById('btn-label').textContent = '\u2295\u00a0 Locate Me';
+    TARGETS.forEach(t => {
+      view.graphics.add(new Graphic({
+        geometry: new Point({ latitude:t.lat, longitude:t.lng }),
+        symbol: new SimpleMarkerSymbol({ style:'circle', color:[255,184,48,0.9], size:12, outline:{color:[255,255,255,0.7],width:1.5} }),
+        popupTemplate: { title:t.name, content:'Lat: '+t.lat+'\u00b0, Lng: '+t.lng+'\u00b0' }
+      }));
+    });
+  }).catch(() => { setPill('err','Map error'); showErr('Failed to load ArcGIS web map.'); });
+
+  window._plotPosition = function(lat, lng, acc) {
+    const pt = new Point({ latitude:lat, longitude:lng });
+    if (userGraphic) view.graphics.remove(userGraphic);
+    if (accuracyGraphic) view.graphics.remove(accuracyGraphic);
+    accuracyGraphic = new Graphic({
+      geometry: geometryEngine.geodesicBuffer(pt, acc, 'meters'),
+      symbol: new SimpleFillSymbol({ color:[61,168,255,0.07], outline:new SimpleLineSymbol({color:[61,168,255,0.55],width:1,style:'dash'}) })
+    });
+    userGraphic = new Graphic({
+      geometry: pt,
+      symbol: new SimpleMarkerSymbol({ style:'circle', color:[61,168,255,1], size:14, outline:{color:[255,255,255,0.9],width:2} }),
+      popupTemplate: { title:'You are here', content:'Lat: '+lat.toFixed(6)+'\u00b0<br>Lng: '+lng.toFixed(6)+'\u00b0<br>Accuracy: \u00b1'+Math.round(acc)+' m' }
+    });
+    view.graphics.addMany([accuracyGraphic, userGraphic]);
+    view.goTo({ target:pt, zoom:15 }, { duration:900, easing:'ease-in-out' });
+    document.getElementById('map-loading').classList.remove('show');
+  };
+});
+
+/* DMS */
+function toDMS(d, pos, neg) {
+  const dir = d>=0?pos:neg, a=Math.abs(d), deg=Math.floor(a);
+  const mf=(a-deg)*60, min=Math.floor(mf), sec=((mf-min)*60).toFixed(1);
+  return deg+'\u00b0 '+min+"' "+sec+'" '+dir;
+}
+function copyDec() { navigator.clipboard.writeText(lastLat.toFixed(7)+', '+lastLng.toFixed(7)).then(()=>flash('copy-dec')); }
+function copyDMS() { navigator.clipboard.writeText(lastDMSlat+', '+lastDMSlng).then(()=>flash('copy-dms')); }
+function flash(id) {
+  const b=document.getElementById(id), orig=b.innerHTML;
+  b.classList.add('ok'); b.textContent='Copied!';
+  setTimeout(()=>{ b.classList.remove('ok'); b.innerHTML=orig; },1600);
+}
+
+/* Tracking */
+function startTracking() {
+  if (!navigator.geolocation) return fail('Geolocation not supported.');
+  const btn = document.getElementById('loc-btn');
+  btn.classList.add('busy');
+  document.getElementById('btn-label').textContent = 'Acquiring signal\u2026';
+  setPill('','Locating');
+  document.getElementById('err-box').classList.remove('show');
+  document.getElementById('map-loading').classList.add('show');
+  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId=null; }
+
+  watchId = navigator.geolocation.watchPosition(pos => {
+    const { latitude:lat, longitude:lng, accuracy } = pos.coords;
+    lastLat=lat; lastLng=lng;
+    lastDMSlat=toDMS(lat,'N','S'); lastDMSlng=toDMS(lng,'E','W');
+    document.getElementById('lat-val').textContent = lat.toFixed(7)+'\u00b0';
+    document.getElementById('lng-val').textContent = lng.toFixed(7)+'\u00b0';
+    document.getElementById('lat-dms').textContent = lastDMSlat;
+    document.getElementById('lng-dms').textContent = lastDMSlng;
+    document.getElementById('cc-lat').classList.add('lit');
+    document.getElementById('cc-lng').classList.add('lit');
+    document.getElementById('copy-row').classList.add('show');
+    setPill('on','Tracking');
+    if (window._plotPosition) window._plotPosition(lat,lng,accuracy);
+    else document.getElementById('map-loading').classList.remove('show');
+    btn.classList.remove('busy');
+    document.getElementById('btn-label').textContent = '\u21ba\u00a0 Restart Tracking';
+    btn.disabled = false;
+    checkProximity(lat,lng);
+  }, e => {
+    const msgs=['','Permission denied.','Position unavailable.','Request timed out.'];
+    fail(msgs[e.code]||'Location error.');
+  }, { enableHighAccuracy:true, timeout:15000, maximumAge:0 });
+}
+
+function fail(msg) {
+  const btn=document.getElementById('loc-btn');
+  btn.disabled=false; btn.classList.remove('busy');
+  document.getElementById('btn-label').textContent='\u2295\u00a0 Retry';
+  setPill('err','Error');
+  document.getElementById('map-loading').classList.remove('show');
+  showErr(msg);
+}
+function setPill(cls,txt) {
+  document.getElementById('pill').className='pill'+(cls?' '+cls:'');
+  document.getElementById('pill-txt').textContent=txt;
+}
+function showErr(msg) { const e=document.getElementById('err-box'); e.textContent=msg; e.classList.add('show'); }
+
+/* Scorecard */
+function openScorecard() {
+  document.getElementById('sc-count-display').textContent = score;
+  document.getElementById('sc-total').textContent = TARGETS.length;
+  document.getElementById('scorecard-overlay').classList.add('open');
+}
+function closeScorecard() { document.getElementById('scorecard-overlay').classList.remove('open'); }
+
+function takeScreenshot() {
+  const btn = document.getElementById('sc-screenshot-btn');
+  const origHTML = btn.innerHTML;
+  btn.classList.add('saving'); btn.textContent = 'Saving\u2026';
+  html2canvas(document.getElementById('scorecard-capture'), { backgroundColor:null, scale:3, useCORS:true, logging:false })
+    .then(canvas => {
+      const link = document.createElement('a');
+      link.download = 'edsummit-score.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      btn.classList.remove('saving');
+      btn.textContent = '\u2713 Saved!';
+      setTimeout(() => { btn.innerHTML = origHTML; }, 2000);
+    })
+    .catch(() => {
+      btn.classList.remove('saving'); btn.innerHTML = origHTML;
+      if (navigator.share) {
+        navigator.share({ title:'My EdSummit Score', text:'I found '+score+' globe(s) at the EdSummit!' });
+      } else {
+        alert('Take a screenshot of this screen to save your score!');
+      }
+    });
+}
+</script>
 </body>
 </html>
