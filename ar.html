@@ -551,13 +551,9 @@ function startTracking() {
         setPill('err', 'Error');
         showErr('Location permission denied. Please enable it in your device settings.');
       } else {
-        // Transient: keep watching, just show a soft warning
-        var softMsg = err.code === 3
-          ? 'Getting your location\u2026 please wait'
-          : 'Location signal weak \u2014 retrying\u2026';
-        setPill('', softMsg.split('\u')[0]);
+        // Transient error (weak signal/timeout) - keep watching
+        setPill('', 'Locating...');
         document.getElementById('map-loading').classList.remove('show');
-        // Keep btn in acquiring state so user knows we're still trying
       }
     },
     // No timeout — watchPosition should run indefinitely.
