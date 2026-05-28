@@ -217,7 +217,7 @@ header{flex-shrink:0;display:flex;align-items:center;justify-content:space-betwe
         <path d="M5 26 Q18 22 31 26" stroke="#ffb830" stroke-width="1" fill="none"/>
       </svg>
     </div>
-    <div class="modal-title"><em>Globe</em> detected!</div>
+    <div class="modal-title"><em>Globie</em> detected!</div>
     <div class="modal-sub" id="modal-target-name"></div>
     <div class="modal-dist" id="modal-dist"></div>
     <button id="ar-btn" onclick="launchAR()">
@@ -226,7 +226,7 @@ header{flex-shrink:0;display:flex;align-items:center;justify-content:space-betwe
         <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
         <line x1="12" y1="22.08" x2="12" y2="12"/>
       </svg>
-      View AR Object
+      View Globie AR Object
     </button>
     <button id="dismiss-btn" onclick="dismissModal()">Dismiss</button>
   </div>
@@ -244,14 +244,14 @@ header{flex-shrink:0;display:flex;align-items:center;justify-content:space-betwe
         <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
         <line x1="12" y1="22.08" x2="12" y2="12"/>
       </svg>
-      Globe AR Viewer
+      Globie AR Viewer
     </div>
-    <button id="ar-close-btn" onclick="closeAR()">&#10003;&nbsp; Done &mdash; Collect Globe</button>
+    <button id="ar-close-btn" onclick="closeAR()">&#10003;&nbsp; Done &mdash; Collect Globie</button>
   </div>
   <model-viewer
     id="the-model-viewer"
     src="https://trbaker.github.io/geogames/Nearky_Pangea.glb"
-    alt="A 3D globe"
+    alt="A 3D Globie"
     ar
     ar-modes="webxr scene-viewer quick-look"
     ar-scale="fixed"
@@ -272,9 +272,9 @@ header{flex-shrink:0;display:flex;align-items:center;justify-content:space-betwe
         <circle cx="12" cy="12" r="3"/>
         <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
       </svg>
-      Place Globe in Real World
+      Place Globie in Real World
     </button>
-    <div class="ar-hint-text">Tap to activate camera &amp; place the Globe in your surroundings</div>
+    <div class="ar-hint-text">Tap to activate camera &amp; place the Globie in your surroundings</div>
     <div id="ar-not-supported">AR not supported on this device.<br>Try Chrome on Android or Safari on iOS 12+.</div>
   </div>
 </div>
@@ -292,8 +292,8 @@ header{flex-shrink:0;display:flex;align-items:center;justify-content:space-betwe
           <path d="M5 26 Q18 22 31 26" stroke="#ffb830" stroke-width="1" fill="none"/>
         </svg>
       </div>
-      <div class="sc-heading">I found <em>Globe</em><br>at the EdSummit</div>
-      <div class="sc-found-label">Globes discovered</div>
+      <div class="sc-heading">I found <em>Globie</em><br>at the EdSummit</div>
+      <div class="sc-found-label">Globies discovered</div>
       <div class="sc-count" id="sc-count-display">0</div>
       <div class="sc-globe-label">out of <span id="sc-total">0</span> total</div>
       <div class="sc-watermark">Globie Hunt &middot; EdSummit 2025</div>
@@ -321,7 +321,7 @@ const WEB_MAP_ID           = "359e7e596f6745558679fc9962d7ab72";
 const TRIGGER_DISTANCE_M   = 50;
 
 const TARGETS = [
-  { name: "Globe #1", lat: 38.912281, lng: -94.613686 },
+  { name: "Globie #1", lat: 38.912281, lng: -94.613686 },
   // more targets coming...
 ];
 /* ═══════════════════════════════════════════ */
@@ -402,7 +402,7 @@ function showModal(target, idx, distM) {
   activeTarget = { target: target, idx: idx };
   document.getElementById('modal-target-name').textContent = target.name;
   document.getElementById('modal-dist').innerHTML =
-    'You are <strong>' + distM + ' m</strong> from this Globe';
+    'You are <strong>' + distM + ' m</strong> from this Globie';
   document.getElementById('modal-overlay').classList.add('open');
 }
 
@@ -598,7 +598,7 @@ if (typeof require !== 'undefined') {
       document.getElementById('placeholder').classList.add('gone');
       setPill('on', 'Map ready');
 
-      // Plot target Globe markers
+      // Plot target Globie markers
       TARGETS.forEach(function(t) {
         view.graphics.add(new Graphic({
           geometry: new Point({ latitude: t.lat, longitude: t.lng }),
@@ -748,11 +748,11 @@ function drawScorecard() {
   ctx.fillStyle = '#e8f2ff'; ctx.font = 'bold 20px sans-serif';
   ctx.fillText('I found', cx, ringY + r + 36);
   ctx.fillStyle = '#ffb830'; ctx.font = 'bold 26px sans-serif';
-  ctx.fillText('Globe', cx, ringY + r + 66);
+  ctx.fillText('Globie', cx, ringY + r + 66);
   ctx.fillStyle = '#e8f2ff'; ctx.font = 'bold 18px sans-serif';
   ctx.fillText('at the EdSummit', cx, ringY + r + 92);
   ctx.fillStyle = '#5d7a96'; ctx.font = '11px monospace';
-  ctx.fillText('GLOBES DISCOVERED', cx, ringY + r + 126);
+  ctx.fillText('GLOBIES DISCOVERED', cx, ringY + r + 126);
 
   ctx.shadowColor = 'rgba(255,184,48,0.4)'; ctx.shadowBlur = 32;
   ctx.fillStyle = '#ffb830'; ctx.font = 'bold 130px sans-serif';
